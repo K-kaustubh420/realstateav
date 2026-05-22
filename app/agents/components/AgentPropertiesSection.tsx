@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Plus, Edit3, CheckCircle, Ban, RefreshCw, Trash2, Home, User, Building2, MapPin, DollarSign, Layers } from "lucide-react";
+import { fetchUserProfile, UserProfile } from '@/lib/users/profile';
 import { Property, PropertyScene, PropertyStatus } from "@/lib/properties/property.types";
 import { AgentData, getAgentData } from "@/lib/agents";
 import { getAgentActiveAgency } from "@/lib/agents/joinAgency";
@@ -30,9 +31,13 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
   // Modals state
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
-  
-  // Claim User Draft state
-  const [claimingProperty, setClaimingProperty] = useState<Property | null>(null);
+  // Draft review state
+  const [reviewingProperty, setReviewingProperty] = useState<Property | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewUserProfile, setReviewUserProfile] = useState<UserProfile | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+
   const [claimListAs, setClaimListAs] = useState<"individual" | "agency">("individual");
 
   const loadPropertiesData = async () => {
@@ -115,8 +120,8 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
     }
   };
 
-  const handleClaimUserDraft = async () => {
-    if (!agentData || !claimingProperty) return;
+  const handleClaimUserDraft = async (property: Property) => {
+    if (!agentData || !property) return;
     setActionLoading(true);
     setError(null);
     setMessage(null);
@@ -128,7 +133,7 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
 
     try {
       await updatePropertyStatus(
-        claimingProperty.id,
+        property.id,
         agentData.uid,
         agentData.fullName || "Unknown Agent",
         "on_sale", // Default scene when claiming/activating
@@ -136,12 +141,30 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
         agencyInfo
       );
       setMessage("User draft property claimed and activated successfully!");
-      setClaimingProperty(null);
       await loadPropertiesData();
     } catch (err: any) {
       setError(err?.message || "Failed to claim and activate property draft.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const openReview = async (property: Property) => {
+    setReviewingProperty(property);
+    setShowReviewModal(true);
+    setReviewLoading(true);
+    setReviewUserProfile(null);
+    try {
+      // Attempt to fetch by email if available, else by UID
+      const email = property.userEmail;
+      if (email) {
+        const profile = await fetchUserProfile(email);
+        if (profile) setReviewUserProfile(profile);
+      }
+    } catch (e) {
+      console.error('Failed to load user profile for draft review', e);
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -215,11 +238,10 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
           <button
             key={tab}
             onClick={() => setActiveSubTab(tab)}
-            className={`flex-1 rounded-xl py-3 text-sm font-semibold capitalize tracking-wide transition duration-300 ${
-              activeSubTab === tab
-                ? "bg-[#D4AF37]/15 text-white shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)] border-b border-[#D4AF37]/30"
-                : "text-slate-400 hover:bg-white/5 hover:text-white"
-            }`}
+            className={`flex-1 rounded-xl py-3 text-sm font-semibold capitalize tracking-wide transition duration-300 ${activeSubTab === tab
+              ? "bg-[#D4AF37]/15 text-white shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)] border-b border-[#D4AF37]/30"
+              : "text-slate-400 hover:bg-white/5 hover:text-white"
+              }`}
           >
             {tab} Listings
           </button>
@@ -276,7 +298,7 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
                 {/* Body */}
                 <div className="mt-4 flex-1">
                   <h4 className="text-lg font-bold text-white line-clamp-1">{property.title}</h4>
-                  
+
                   <div className="mt-2 flex items-center gap-2 text-slate-400 text-xs">
                     <MapPin className="h-3.5 w-3.5 text-slate-500" />
                     <span className="line-clamp-1">{property.location}, {property.city}</span>
@@ -314,11 +336,11 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
                   {isUserDraft ? (
                     <button
-                      onClick={() => setClaimingProperty(property)}
+                      onClick={() => openReview(property)}
                       className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-black hover:bg-amber-400 transition"
                     >
                       <CheckCircle className="h-3.5 w-3.5" />
-                      Claim & List
+                      Review & Claim
                     </button>
                   ) : (
                     <>
@@ -411,40 +433,80 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
         />
       )}
 
-      {/* Claim user-created draft dialog */}
-      {claimingProperty && (
+      {/* Draft Review Modal */}
+      {showReviewModal && reviewingProperty && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-900 p-6 text-white shadow-2xl backdrop-blur-2xl">
-            <h4 className="text-xl font-bold text-white">Claim Property Listing</h4>
-            <p className="mt-2 text-sm text-slate-400">
-              Claim this user-submitted draft property. Choose whether you want to list it as a personal listing or under your agency.
-            </p>
-
-            <div className="mt-6 space-y-4">
-              <label className="flex flex-col gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">List As</span>
-                <select
-                  value={claimListAs}
-                  onChange={(e) => setClaimListAs(e.target.value as any)}
-                  className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 outline-none focus:border-[#D4AF37] transition text-sm"
-                >
-                  <option value="individual">Individual Agent (Personal)</option>
-                  {activeAgency && (
-                    <option value="agency">Agency: {activeAgency.agencyName}</option>
-                  )}
-                </select>
-              </label>
+          <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-zinc-900 p-6 text-white shadow-2xl backdrop-blur-2xl overflow-y-auto max-h-[90vh]">
+            <h4 className="text-xl font-bold text-white mb-4">Review Draft Property</h4>
+            {/* Property Details */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="col-span-2">
+                <img src={reviewingProperty.images?.[0] || DEFAULT_IMAGES[0]} alt={reviewingProperty.title} className="w-full h-48 object-cover rounded-2xl mb-4" />
+              </div>
+              <div>
+                <p className="font-semibold">Title:</p>
+                <p>{reviewingProperty.title}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Location:</p>
+                <p>{reviewingProperty.location}, {reviewingProperty.city}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Price:</p>
+                <p>₹{reviewingProperty.expectedPrice?.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</p>
+              </div>
+              <div>
+                <p className="font-semibold">BHK:</p>
+                <p>{reviewingProperty.bhk || "-"}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Area:</p>
+                <p>{reviewingProperty.carpetArea || reviewingProperty.builtUpArea || "-"} sqft</p>
+              </div>
+              <div className="col-span-2">
+                <p className="font-semibold">Description:</p>
+                <p>{reviewingProperty.description}</p>
+              </div>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3">
+            {/* User Identity Section */}
+            <hr className="my-4 border-white/20" />
+            <h5 className="text-lg font-semibold mb-2">User Contact Details</h5>
+            {reviewLoading ? (
+              <p className="text-sm text-slate-400">Loading user info...</p>
+            ) : reviewUserProfile ? (
+              <div className="grid gap-2">
+                <p><strong>Name:</strong> {reviewUserProfile.fullName || "-"}</p>
+                <p><strong>Email:</strong> {reviewUserProfile.email}</p>
+                <p><strong>Phone:</strong> {reviewUserProfile.phoneNumber || "-"}</p>
+                <p><strong>ID Type:</strong> {reviewUserProfile.governmentIdType || "-"}</p>
+                {reviewUserProfile.governmentIdImageUrl && (
+                  <img src={reviewUserProfile.governmentIdImageUrl} alt="Government ID" className="mt-2 max-h-32 object-contain" />
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">User profile not available.</p>
+            )}
+
+            {/* Claim action */}
+            <div className="mt-6 flex justify-end gap-3">
               <button
-                onClick={() => setClaimingProperty(null)}
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setReviewingProperty(null);
+                }}
                 className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleClaimUserDraft}
+                onClick={() => {
+                  if (reviewingProperty) {
+                    handleClaimUserDraft(reviewingProperty);
+                  }
+                  setShowReviewModal(false);
+                  setReviewingProperty(null);
+                }}
                 className="rounded-full bg-[#D4AF37] px-6 py-2.5 text-xs font-bold text-black hover:bg-[#c5a12e] transition"
               >
                 Confirm Claim & List

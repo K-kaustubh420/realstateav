@@ -109,6 +109,20 @@ export const createAgency = async (owner: { agentId: string; name: string; email
     joinRequests: [],
   });
 
+  // Auto-map owner as active agency member on their agent document
+  const ownerAgentRef = doc(db, "agents", owner.email);
+  await setDoc(
+    ownerAgentRef,
+    {
+      activeAgency: {
+        agencyId: docRef.id,
+        agencyName: payload.agencyName,
+        role: "owner",
+      },
+    },
+    { merge: true }
+  );
+
   return docRef.id;
 };
 
