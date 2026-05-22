@@ -6,6 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import UserPropertiesSection from './UserPropertiesSection';
 import UserProfileSection from './UserProfileSection';
+import UserChatsSection from './UserChatsSection';
 import { Playfair_Display } from 'next/font/google';
 
 const playfair = Playfair_Display({
@@ -14,7 +15,7 @@ const playfair = Playfair_Display({
   variable: '--font-playfair',
 });
 
-type TabType = 'buy-rent' | 'my-properties' | 'list-property' | 'profile';
+type TabType = 'buy-rent' | 'my-properties' | 'list-property' | 'profile' | 'chats';
 
 export default function UserDashboardPage(): JSX.Element {
   const [user, setUser] = useState<any>(null);
@@ -31,7 +32,7 @@ export default function UserDashboardPage(): JSX.Element {
   }, []);
 
   // Callback to handle tab switching from child components
-  const handleNavigateTab = (tab: 'buy-rent' | 'my-properties' | 'list-property') => {
+  const handleNavigateTab = (tab: 'buy-rent' | 'my-properties' | 'list-property' | 'chats') => {
     setActiveTab(tab);
   };
 
@@ -90,17 +91,17 @@ export default function UserDashboardPage(): JSX.Element {
             [
               { id: 'buy-rent', label: '🛒 Marketplace', val: 'buy-rent' },
               { id: 'my-properties', label: '📁 My Listings & Favorites', val: 'my-properties' },
+              { id: 'chats', label: '💬 Messages', val: 'chats' },
               { id: 'profile', label: '👤 Profile Settings', val: 'profile' },
             ] as const
           ).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.val as TabType)}
-              className={`py-3 px-4 sm:px-6 font-bold text-sm border-b-2 transition-all capitalize ${
-                activeTab === tab.val
-                  ? 'border-warning text-warning'
-                  : 'border-transparent text-zinc-400 hover:text-white hover:border-zinc-700'
-              }`}
+              className={`py-3 px-4 sm:px-6 font-bold text-sm border-b-2 transition-all capitalize ${activeTab === tab.val
+                ? 'border-warning text-warning'
+                : 'border-transparent text-zinc-400 hover:text-white hover:border-zinc-700'
+                }`}
             >
               {tab.label}
             </button>
@@ -111,12 +112,14 @@ export default function UserDashboardPage(): JSX.Element {
         <div className="bg-transparent">
           {activeTab === 'profile' ? (
             <UserProfileSection userEmail={user.email || ''} />
+          ) : activeTab === 'chats' ? (
+            <UserChatsSection userEmail={user.email || ''} userId={user.uid} />
           ) : (
             <UserPropertiesSection
               userEmail={user.email || ''}
               userId={user.uid}
               userName={user.displayName || undefined}
-              activeTab={activeTab === 'list-property' ? 'list-property' : activeTab}
+              activeTab={activeTab === 'list-property' ? 'list-property' : activeTab as any}
               onNavigateTab={handleNavigateTab}
             />
           )}

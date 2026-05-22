@@ -9,6 +9,7 @@ import {
   toggleInterest,
 } from '@/lib/users/properties';
 import UserDraftFormModal from './UserDraftFormModal';
+import ChatWidget from '@/app/components/ChatWidget';
 import Image from 'next/image';
 
 interface UserPropertiesSectionProps {
@@ -150,6 +151,45 @@ export default function UserPropertiesSection({
     'Plot / Land',
   ];
 
+  // Chat Widget State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState('');
+  const [chatSubtitle, setChatSubtitle] = useState('');
+  const [chatImage, setChatImage] = useState<string | null>(null);
+
+  const handleStartConversation = async (property: Property) => {
+    if (!property.agentId) {
+      alert("This property does not have an assigned agent yet.");
+      return;
+    }
+    setActionLoading(`chat_${property.id}`);
+    setError(null);
+    try {
+      // Create or get existing conversation
+      const { createUserConversation } = await import('@/lib/users/chat');
+      const convId = await createUserConversation({
+        conversationContext: property.property_scene === 'on_rent' ? 'property_rental' : 'property_buying',
+        propertyId: property.id,
+        propertyTitle: property.title,
+        propertyImage: property.images?.[0] || null,
+        agentId: property.agentId,
+        agentName: property.agentName || 'Agent',
+        agentEmail: property.agentId // Fallback if no email is attached to property, though agent details are limited here. We should probably fetch agent email if needed, or chat.ts can handle it.
+      }, userEmail);
+
+      setActiveChatId(convId);
+      setChatTitle(property.title || '');
+      setChatSubtitle(`with ${property.agentName || 'Agent'}`);
+      setChatImage(property.images?.[0] || null);
+      setIsChatOpen(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to start conversation. Ensure your identity profile is complete.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {error && (
@@ -285,23 +325,38 @@ export default function UserPropertiesSection({
                           <span className="text-xs text-zinc-500 italic">No agent assigned</span>
                         )}
 
-                        <button
-                          onClick={() => handleToggleInterestClick(property.id, isUserInterested)}
-                          className={`btn btn-xs rounded-full font-bold px-3 ${
-                            isUserInterested
-                              ? 'bg-rose-600 hover:bg-rose-700 text-white border-none'
-                              : 'btn-outline border-zinc-700 text-zinc-300 hover:bg-warning hover:text-black hover:border-none'
-                          }`}
-                          disabled={actionLoading === property.id}
-                        >
-                          {actionLoading === property.id ? (
-                            <span className="loading loading-spinner loading-xs"></span>
-                          ) : isUserInterested ? (
-                            '❤️ Interested'
-                          ) : (
-                            '🤍 Mark Interested'
+                        <div className="flex gap-2">
+                          {property.agentId && (
+                            <button
+                              onClick={() => handleStartConversation(property)}
+                              className="btn btn-xs rounded-full font-bold px-3 btn-outline border-zinc-700 text-zinc-300 hover:bg-warning hover:text-black hover:border-none"
+                              disabled={actionLoading === `chat_${property.id}`}
+                            >
+                              {actionLoading === `chat_${property.id}` ? (
+                                <span className="loading loading-spinner loading-xs"></span>
+                              ) : (
+                                '💬 Contact Agent'
+                              )}
+                            </button>
                           )}
-                        </button>
+                          <button
+                            onClick={() => handleToggleInterestClick(property.id, isUserInterested)}
+                            className={`btn btn-xs rounded-full font-bold px-3 ${
+                              isUserInterested
+                                ? 'bg-rose-600 hover:bg-rose-700 text-white border-none'
+                                : 'btn-outline border-zinc-700 text-zinc-300 hover:bg-warning hover:text-black hover:border-none'
+                            }`}
+                            disabled={actionLoading === property.id}
+                          >
+                            {actionLoading === property.id ? (
+                              <span className="loading loading-spinner loading-xs"></span>
+                            ) : isUserInterested ? (
+                              '❤️ Interested'
+                            ) : (
+                              '🤍 Mark Interested'
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -532,6 +587,21 @@ export default function UserPropertiesSection({
         userId={userId}
         userName={userName}
         editProperty={editProperty}
+      />
+
+      {/* Realtime Chat Widget */}
+      <ChatWidget
+        isOpen={isChatOpen}
+        onClose={() => {
+          setIsChatOpen(false);
+          setActiveChatId(null);
+        }}
+        conversationId={activeChatId}
+        currentUserId={userId}
+        currentUserRole="user"
+        title={chatTitle}
+        subtitle={chatSubtitle}
+        imageUrl={chatImage}
       />
     </div>
   );

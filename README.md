@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Real Estate Platform Architecture & Documentation
 
-## Getting Started
+Welcome to the core documentation for our proprietary Real Estate Platform. This document explains the platform's complete architecture, systems, logic flows, scalability principles, and technical design.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+> [!WARNING]
+> **DEVELOPMENT & ARCHITECTURE WARNING**
+> - **Do NOT randomly delete, refactor, or remove files just because they "look unnecessary".** Many systems are deeply interconnected and intentionally structured for future scaling, edge-case handling, and realtime flows.
+> - **UI is NOT final yet.** The system was intentionally prioritized **backend-first**. The core functionality, architecture, and backend systems are implemented and robust, but extensive UI polish and aesthetic enhancements are still pending.
+> - **Firebase Errors:** If you encounter permission errors (e.g., `Missing or insufficient permissions`), **DO NOT** blame the application logic first. Check Firestore Rules, Realtime Database Rules, and Firebase Auth permissions, because strict security rules are critical to system functionality.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 1. Platform Overview
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The platform is a scalable, multi-sided marketplace connecting **Users** (buyers, renters, property owners) and **Agents/Agencies**. It facilitates property listings, direct inquiries, agent verification, agency management, and real-time communication.
 
-## Learn More
+The architecture is built on **Next.js** with a **Firebase** backend. We utilize a highly decoupled, modular structure designed to handle high concurrency, large data volumes, and complex relational flows (e.g., a user transferring a draft property to an agent, who might be part of an agency).
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 2. Architecture & Technical Design
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Hybrid Database Architecture: Firestore + Realtime Database
+We use a hybrid approach to maximize scalability, minimize costs, and ensure real-time responsiveness.
 
-## Deploy on Vercel
+* **Firestore Responsibilities:** Used for structured, queryable data and metadata. It handles User Profiles, Agent Profiles, Agencies, Property Listings, and Conversation Metadata. Firestore is ideal for complex filtering (e.g., searching properties by city, type, or agent) and ensuring robust ACID-compliant updates for ownership transfers.
+* **Realtime Database Responsibilities:** Used strictly for the live chat message stream (`messages/{conversationId}`). RTDB is heavily optimized for low-latency, high-frequency small payloads (like chat messages) and does not charge per document read, saving massive costs compared to streaming messages via Firestore.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Centralized Property Architecture
+Unlike typical systems that might duplicate property data into "user properties" and "agent properties", we use a **single, centralized `properties` collection**.
+* **Why?** Centralization prevents data fragmentation and ensures single-source-of-truth reliability. When a user drafts a property, and an agent later claims it, the document ID remains the same. We merely update ownership pointers (`agentId`, `status`). 
+* **Scalability:** By keeping the data flat and centralized, querying active marketplace listings is an extremely fast, single-collection query.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Ownership Mapping & Validation
+Properties utilize strict ownership pointers:
+* `userId`: Points to the original creator (if a user drafted it).
+* `agentId`: Points to the managing agent.
+* `agencyId`: Points to the agency if the agent listed it under their firm.
+This structure ensures that ownership transfer, agency migrations, and access control can be handled purely by updating IDs, without moving massive data payloads.
+
+### `conversationContext` Routing
+Conversations use a strictly typed `conversationContext` (e.g., `property_listing`, `property_buying`, `property_rental`, `agent_finder`).
+* **Why?** It prevents UI clutter and logic overlap. An agent can instantly distinguish a chat about "someone wanting to buy a property" versus "someone asking the agent to list their property." It future-proofs the routing logic for specific dashboards.
+
+---
+
+## 3. Core System Flows
+
+### User Identity Verification Flow
+Before users can create property drafts or initiate conversations, they must complete lightweight identity verification (Phone, Government ID, Consent). 
+* **Why?** This prevents spam, protects agent time, and acts as a trust-and-safety layer for property ownership claims. Users self-declare consent, locking in their identity before interacting with the ecosystem.
+
+### Property Lifecycle & Ownership Transfer
+1. **User Drafts Property:** A user submits a property they want to sell/rent. It enters the centralized database with `status = "draft"`, `userId = {user.uid}`, and `agentId = null`. It does NOT appear on the public marketplace.
+2. **Agent Claims Property:** An agent reviews the draft via their dashboard. They verify the user's identity details and click "Contact User". Once terms are agreed, the agent clicks "Claim & List".
+3. **Status Activation:** The system updates the exact same document, assigning `agentId`, optionally `agencyId`, and changing status to `"active"`. It instantly appears on the public marketplace.
+
+### Realtime Chat Flow
+1. **Initiation:** A user clicks "Contact Agent" on a property. The system checks if a conversation with `(userId, agentId, propertyId, context)` exists. If not, it creates metadata in Firestore.
+2. **Streaming:** The UI mounts a `ChatWidget` that attaches an `onChildAdded` listener to Realtime Database.
+3. **Delivery:** When a message is sent, it pushes directly to RTDB, bypassing complex backend logic, achieving near-instantaneous delivery to the recipient.
+
+### Agency Ownership & Management
+Agents can create or join Agencies. When an agent creates a property listing, they can choose to list it as an "individual" or under their "active agency".
+* If an agent leaves an agency, properties strictly tied to the agency remain with the agency, ensuring business continuity. Properties tied to the individual move with the individual.
+
+---
+
+## 4. Scalability, Safety & Edge Cases
+
+* **Concurrency Safety:** Core actions (claiming a property, joining an agency) are protected by specific queries and state-loading disables to prevent double-submissions.
+* **Modular Separation:** By completely separating User hooks (`lib/users`) from Agent hooks (`lib/agents`), we ensure that a bug in the user portal cannot accidentally expose agent admin privileges.
+* **Realtime Responsiveness vs Memory:** The `ChatWidget` is designed to completely detach Realtime listeners when closed. Persistent global listeners are avoided to prevent memory leaks during large traffic spikes.
+* **Traffic Spike Resilience:** Because the public marketplace is a simple Firestore read of `status == "active"`, and chats are offloaded to RTDB, the system can handle massive user spikes without choking the database throughput.
+
+---
+
+## 5. Future Expansion Readiness
+
+The architecture is explicitly designed to support planned expansions:
+* **Agent Finder:** The `agent_finder` conversation context is already built. Future UI can simply render a directory of agents, and clicking "Contact" will natively route through the existing chat infrastructure.
+* **Dubai / Commercial Properties:** Because properties are centralized and typed (`propertyType`, `bhk`, `carpetArea`), adding new categories or entirely new regions (like a dedicated Dubai landing page) only requires updating frontend queries, zero database migrations needed.
+* **Multi-region Scaling:** Firebase effortlessly scales globally.
+* **Analytics / Enhanced Search:** Centralized Firestore data easily hooks into Algolia or Typesense for future advanced filtering.
+
+---
+
+*This architecture ensures we move fast, scale safely, and never box ourselves into monolithic design patterns.*

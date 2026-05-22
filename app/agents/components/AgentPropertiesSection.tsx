@@ -11,6 +11,7 @@ import { getAgentActiveAgency } from "@/lib/agents/joinAgency";
 import { updatePropertyStatus } from "@/lib/properties/propertyStatus";
 import { deleteProperty } from "@/lib/properties/deleteProperty";
 import PropertyFormModal from "./PropertyFormModal";
+import ChatWidget from "@/app/components/ChatWidget";
 
 interface AgentPropertiesSectionProps {
   email: string;
@@ -39,6 +40,13 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
 
 
   const [claimListAs, setClaimListAs] = useState<"individual" | "agency">("individual");
+
+  // Chat Widget State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState('');
+  const [chatSubtitle, setChatSubtitle] = useState('');
+  const [chatImage, setChatImage] = useState<string | null>(null);
 
   const loadPropertiesData = async () => {
     setLoading(true);
@@ -144,6 +152,41 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
       await loadPropertiesData();
     } catch (err: any) {
       setError(err?.message || "Failed to claim and activate property draft.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleStartUserChat = async () => {
+    if (!agentData || !reviewingProperty || !reviewUserProfile) return;
+    setActionLoading(true);
+    setError(null);
+    try {
+      const { createAgentConversation } = await import('@/lib/agents/chat');
+      const convId = await createAgentConversation(
+        {
+          conversationContext: 'property_listing',
+          propertyId: reviewingProperty.id,
+          propertyTitle: reviewingProperty.title,
+          propertyImage: reviewingProperty.images?.[0] || null,
+          agentId: agentData.uid,
+          agentName: agentData.fullName || agentData.email,
+          agentEmail: agentData.email,
+        },
+        agentData.uid,
+        reviewUserProfile.uid,
+        reviewUserProfile.fullName || '',
+        reviewUserProfile.email
+      );
+      
+      setActiveChatId(convId);
+      setChatTitle(reviewingProperty.title || '');
+      setChatSubtitle(`with ${reviewUserProfile.fullName || 'User'}`);
+      setChatImage(reviewingProperty.images?.[0] || null);
+      setIsChatOpen(true);
+      setShowReviewModal(false);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to start conversation.');
     } finally {
       setActionLoading(false);
     }
@@ -500,6 +543,13 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
                 Cancel
               </button>
               <button
+                onClick={handleStartUserChat}
+                disabled={actionLoading}
+                className="rounded-full border border-sky-500/30 bg-sky-500/10 px-5 py-2.5 text-xs font-bold text-sky-400 hover:bg-sky-500/20 transition disabled:opacity-50"
+              >
+                {actionLoading ? 'Loading...' : '💬 Contact User'}
+              </button>
+              <button
                 onClick={() => {
                   if (reviewingProperty) {
                     handleClaimUserDraft(reviewingProperty);
@@ -514,6 +564,23 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
             </div>
           </div>
         </div>
+      )}
+
+      {/* Realtime Chat Widget */}
+      {agentData && (
+        <ChatWidget
+          isOpen={isChatOpen}
+          onClose={() => {
+            setIsChatOpen(false);
+            setActiveChatId(null);
+          }}
+          conversationId={activeChatId}
+          currentUserId={agentData.uid}
+          currentUserRole="agent"
+          title={chatTitle}
+          subtitle={chatSubtitle}
+          imageUrl={chatImage}
+        />
       )}
     </div>
   );

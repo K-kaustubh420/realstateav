@@ -6,6 +6,7 @@ import { Building2, Home, MessageCircle, User, LogOut } from "lucide-react";
 import { agentLogout } from "../../../lib/agentAuth";
 import AgentAgencySection from "@/app/agents/components/AgentAgencySection";
 import AgentPropertiesSection from "@/app/agents/components/AgentPropertiesSection";
+import AgentChatsSection from "@/app/agents/components/AgentChatsSection";
 
 type VerifiedDashboardProps = {
   email: string;
@@ -108,6 +109,8 @@ export default function VerifiedDashboard({ email }: VerifiedDashboardProps) {
                   <AgentAgencySection email={email} />
                 ) : activeTab === "properties" ? (
                   <AgentPropertiesSection email={email} />
+                ) : activeTab === "chats" ? (
+                  <AgentChatsSection email={email} />
                 ) : (
                   <div className="rounded-2xl border border-white/10 bg-black/55 p-8 shadow-[0_18px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur-2xl sm:p-10">
                     <p className="text-lg font-medium text-white">{activeSection?.label} tools are coming soon.</p>
