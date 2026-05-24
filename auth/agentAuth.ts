@@ -1,3 +1,5 @@
+"use client";
+
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -8,14 +10,15 @@ import {
 import {
   doc,
   getDoc,
-  setDoc,
 } from "firebase/firestore";
 
 import {
   auth,
   db,
   googleProvider,
-} from "./firebase";
+} from "../lib/firebase";
+
+import { registerAgentDocAction } from "../lib/agents/agentAuthServer";
 
 const checkUser =
   async (email: string) => {
@@ -27,31 +30,7 @@ const checkUser =
       await getDoc(userRef);
 
     return userSnap.exists();
-};
-
-const createAgentDoc =
-  async (
-    uid: string,
-    email: string
-  ) => {
-
-    const agentRef =
-      doc(db, "agents", email);
-
-    const agentSnap =
-      await getDoc(agentRef);
-
-    if (!agentSnap.exists()) {
-
-      await setDoc(agentRef, {
-        uid,
-        email,
-        role: "agent",
-        createdAt: Date.now(),
-      });
-
-    }
-};
+  };
 
 export const googleAgentLogin =
   async () => {
@@ -78,13 +57,21 @@ export const googleAgentLogin =
       );
     }
 
-    await createAgentDoc(
-      user.uid,
-      user.email || ""
-    );
+    // Call the server action to save/sync agent document
+    const syncRes = await registerAgentDocAction({
+      uid: user.uid,
+      email: user.email || "",
+      fullname: user.displayName || "",
+      countryCode: "",
+      mobileNumber: "",
+    });
+
+    if (!syncRes.success) {
+      throw new Error(syncRes.error || "Failed to create agent record on server.");
+    }
 
     return result;
-};
+  };
 
 export const agentLogin =
   async (
@@ -109,13 +96,21 @@ export const agentLogin =
         password
       );
 
-    await createAgentDoc(
-      result.user.uid,
-      result.user.email || ""
-    );
+    // Call the server action to sync agent document
+    const syncRes = await registerAgentDocAction({
+      uid: result.user.uid,
+      email: result.user.email || "",
+      fullname: "",
+      countryCode: "",
+      mobileNumber: "",
+    });
+
+    if (!syncRes.success) {
+      throw new Error(syncRes.error || "Failed to sync agent record on server.");
+    }
 
     return result;
-};
+  };
 
 export const agentSignup =
   async (
@@ -140,17 +135,25 @@ export const agentSignup =
         password
       );
 
-    await createAgentDoc(
-      result.user.uid,
-      result.user.email || ""
-    );
+    // Call the server action to register agent document
+    const syncRes = await registerAgentDocAction({
+      uid: result.user.uid,
+      email: result.user.email || "",
+      fullname: "",
+      countryCode: "",
+      mobileNumber: "",
+    });
+
+    if (!syncRes.success) {
+      throw new Error(syncRes.error || "Failed to register agent record on server.");
+    }
 
     return result;
-};
+  };
 
 export const agentLogout =
   async () => {
 
     await signOut(auth);
 
-};
+  };

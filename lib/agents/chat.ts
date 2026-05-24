@@ -4,7 +4,7 @@ import { db, realtimeDb } from "../firebase";
 import { ref, push, set, onChildAdded, off } from "firebase/database";
 import { getAgentData } from "../agents";
 import {
-  ConversationContext,
+
   ConversationDoc,
   NewConversationParams,
   ChatMessage,
@@ -56,7 +56,7 @@ export const createAgentConversation = async (
     unreadByAgent: false,
     unreadByUser: true,
     status: "active",
-  } as any);
+  } as unknown);
 
   return convRef.id;
 };

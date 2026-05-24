@@ -1,0 +1,228 @@
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { sendOtpAction, verifyOtpAction, registerAgentDocAction } from "../lib/agents/agentAuthServer";
+
+export const useAgentRegister = () => {
+    const router = useRouter();
+    const [loading, setLoading] = useState(false);
+    
+    // Form State
+    const [formData, setFormData] = useState({
+        fullname: "",
+        countryCode: "+977",
+        mobileNumber: "",
+        email: "",
+        password: "",
+        confirmPassword: ""
+    });
+
+    // OTP State
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otp, setOtp] = useState(["", "", "", ""]); 
+    const [timer, setTimer] = useState(45);
+    const [isVerified, setIsVerified] = useState(false);
+
+    // Password Validation Logic
+    const hasCapital = /(?=.*[A-Z])/.test(formData.password);
+    const hasNumber = /(?=.*[0-9])/.test(formData.password);
+    const hasSpecial = /(?=.*[!@#$%^&*])/.test(formData.password);
+    const hasMinLength = formData.password.length >= 8;
+    const isPasswordStrong = hasCapital && hasNumber && hasSpecial && hasMinLength;
+    const isPasswordMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
+
+    // Timer Logic
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (showOtpModal && timer > 0 && !isVerified) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [showOtpModal, timer, isVerified]);
+
+    // Handlers
+    const handleInputChange = (field: string, value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleOtpChange = (index: number, value: string) => {
+        if (isNaN(Number(value))) return;
+        const newOtp = [...otp];
+        newOtp[index] = value;
+        setOtp(newOtp);
+
+        // Auto-focus next input
+        if (value && index < 3) {
+            const nextInput = document.getElementById(`otp-${index + 1}`);
+            nextInput?.focus();
+        }
+    };
+
+    // Check against 'users' collection
+    const checkIfEmailIsUser = async (email: string) => {
+        try {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('email', '==', email));
+            const querySnapshot = await getDocs(q);
+            
+            // If document exists, this email belongs to a Client/User
+            return !querySnapshot.empty;
+        } catch (error) {
+            console.error("Error checking user database:", error);
+            throw new Error("Unable to verify email availability.");
+        }
+    };
+
+    // Step 1: Validate Form & Send OTP
+    const handleRegisterClick = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (formData.password !== formData.confirmPassword) {
+            toast.error("Passwords do not match");
+            return;
+        }
+
+        if (!isPasswordStrong) {
+            toast.error("Please meet all password security requirements.");
+            return;
+        }
+
+        setLoading(true);
+        const toastId = toast.loading("Checking details...");
+
+        try {
+             // 1. CHECK: Is this email already a 'User' (Client)?
+             const isClient = await checkIfEmailIsUser(formData.email);
+             
+             if (isClient) {
+                 toast.error("This email is registered as a Client/Buyer. Please use a different email for your Agent account.", { 
+                     id: toastId,
+                     duration: 5000 
+                 });
+                 return;
+             }
+
+             // 2. Send OTP via Server Action
+             const res = await sendOtpAction(formData.email);
+             
+             if (!res.success) throw new Error(res.error || "Failed to send OTP");
+
+             toast.success("Verification code sent!", { id: toastId });
+             setShowOtpModal(true);
+             setTimer(45);
+
+        } catch (err: any) {
+             toast.error(err.message || "Failed to initiate verification", { id: toastId });
+        } finally {
+             setLoading(false);
+        }
+    };
+
+    // Step 2: Verify OTP -> Create Auth -> Call DB Server Action
+    const handleVerifyOtp = async () => {
+        if (otp.some(digit => digit === "")) {
+            toast.error("Please enter the full 4-digit code");
+            return;
+        }
+
+        setLoading(true);
+        const toastId = toast.loading("Verifying code...");
+
+        try {
+             // 1. Verify OTP via Server Action
+             const otpCode = otp.join("");
+             const resOtp = await verifyOtpAction(formData.email, otpCode);
+
+             if (!resOtp.success) {
+                  if (resOtp.error?.toLowerCase().includes("expired")) {
+                      throw new Error("OTP has expired. Please resend.");
+                  }
+                  throw new Error(resOtp.error || "Invalid OTP Code.");
+             }
+
+             // 2. Double check (race condition safety)
+             const isClient = await checkIfEmailIsUser(formData.email);
+             if (isClient) throw new Error("This email is registered as a Client.");
+
+             // 3. Create User in Firebase Authentication
+             toast.loading("Creating account...", { id: toastId });
+             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+             const user = userCredential.user;
+
+             // 4. Call the Agent Register Server Action to save to Firestore
+             const apiRes = await registerAgentDocAction({
+                 uid: user.uid,
+                 email: formData.email,
+                 fullname: formData.fullname,
+                 countryCode: formData.countryCode,
+                 mobileNumber: formData.mobileNumber
+             });
+
+             if (!apiRes.success) {
+                 throw new Error(apiRes.error || "Failed to save account details");
+             }
+
+             // 5. Success
+             toast.success("Account created successfully!", { id: toastId });
+             setIsVerified(true);
+             setTimeout(() => {
+                 setShowOtpModal(false);
+                 router.push("/agentportal/login"); 
+             }, 2000);
+
+        } catch (err: any) {
+             if (err.code === 'auth/email-already-in-use') {
+                 toast.error("This email is already in use. Please login.", { id: toastId });
+             } else {
+                 toast.error(err.message || "Something went wrong", { id: toastId });
+             }
+        } finally {
+             setLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        setTimer(45);
+        const toastId = toast.loading("Sending new code...");
+        try {
+             const res = await sendOtpAction(formData.email);
+             
+             if (res.success) {
+                 toast.success("New code sent", { id: toastId });
+             } else {
+                 throw new Error(res.error || "Failed to resend");
+             }
+        } catch (err: any) {
+             toast.error(err.message || "Could not resend OTP.", { id: toastId });  
+        }
+    };
+
+    return {
+        formData,
+        handleInputChange,
+        loading,
+        showOtpModal,
+        setShowOtpModal,
+        otp,
+        handleOtpChange,
+        timer,
+        isVerified,
+        handleRegisterClick,
+        handleVerifyOtp,
+        handleResendOtp,
+        passwordValidation: {
+            hasCapital,
+            hasNumber,
+            hasSpecial,
+            hasMinLength,
+            isPasswordStrong,
+            isPasswordMatch,
+            isConfirming: formData.confirmPassword.length > 0
+        }
+    };
+};

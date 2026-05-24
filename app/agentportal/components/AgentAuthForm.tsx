@@ -6,7 +6,7 @@ import {
   agentLogin,
   agentSignup,
   googleAgentLogin,
-} from "@/lib/agentAuth";
+} from "@/auth/agentAuth";
 
 export default function AgentAuthForm({
   mode,

@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Home, MessageCircle, User, LogOut } from "lucide-react";
-import { agentLogout } from "../../../lib/agentAuth";
-import AgentAgencySection from "@/app/agents/components/AgentAgencySection";
-import AgentPropertiesSection from "@/app/agents/components/AgentPropertiesSection";
-import AgentChatsSection from "@/app/agents/components/AgentChatsSection";
+import { agentLogout } from "../../../auth/agentAuth";
+import AgentAgencySection from "@/app/agentportal/components/AgentAgencySection";
+import AgentPropertiesSection from "@/app/agentportal/components/AgentPropertiesSection";
+import AgentChatsSection from "@/app/agentportal/components/AgentChatsSection";
 
 type VerifiedDashboardProps = {
   email: string;
@@ -53,11 +53,10 @@ export default function VerifiedDashboard({ email }: VerifiedDashboardProps) {
                   key={tab.key}
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
-                  className={`group flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left text-sm transition duration-300 ${
-                    active
-                      ? "border-[#D4AF37]/25 bg-[#D4AF37]/10 text-white shadow-[inset_0_0_0_1px_rgba(212,175,55,0.15)]"
-                      : "border-transparent bg-white/5 text-slate-300 hover:border-white/10 hover:bg-white/10"
-                  }`}
+                  className={`group flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left text-sm transition duration-300 ${active
+                    ? "border-[#D4AF37]/25 bg-[#D4AF37]/10 text-white shadow-[inset_0_0_0_1px_rgba(212,175,55,0.15)]"
+                    : "border-transparent bg-white/5 text-slate-300 hover:border-white/10 hover:bg-white/10"
+                    }`}
                 >
                   <Icon className={`h-5 w-5 transition ${active ? "text-[#D4AF37]" : "text-slate-400 group-hover:text-white"}`} />
                   <span className="font-medium tracking-wide">{tab.label}</span>

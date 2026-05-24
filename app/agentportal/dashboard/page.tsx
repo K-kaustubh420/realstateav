@@ -8,11 +8,11 @@ import {
   getAgentData,
   submitVerification,
 } from "@/lib/agents";
-import VerificationWelcome from "@/app/agents/components/VerificationWelcome";
-import VerificationForm from "@/app/agents/components/VerificationForm";
-import VerificationPending from "@/app/agents/components/VerificationPending";
-import VerificationRejected from "@/app/agents/components/VerificationRejected";
-import VerifiedDashboard from "@/app/agents/components/VerifiedDashboard";
+import VerificationWelcome from "@/app/agentportal/components/VerificationWelcome";
+import VerificationForm from "@/app/agentportal/components/VerificationForm";
+import VerificationPending from "@/app/agentportal/components/VerificationPending";
+import VerificationRejected from "@/app/agentportal/components/VerificationRejected";
+import VerifiedDashboard from "@/app/agentportal/components/VerifiedDashboard";
 
 export default function AgentDashboardPage() {
   const [agentData, setAgentData] = useState<AgentData | null>(null);
@@ -37,8 +37,8 @@ export default function AgentDashboardPage() {
       try {
         const agent = await getAgentData(user.email);
         setAgentData(agent);
-      } catch (err) {
-        setError("Unable to load your agent profile.");
+      } catch (err: any) {
+        setError(err.message);
       } finally {
         setLoading(false);
       }
@@ -102,8 +102,8 @@ export default function AgentDashboardPage() {
         verificationIssue: "",
       });
       setShowForm(false);
-    } catch (err) {
-      setError("Unable to submit verification. Please try again.");
+    } catch (error: any) {
+      setError(error || "Failed to submit verification. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -69,7 +69,7 @@ export const getAgencyByOwnerEmail = async (email: string): Promise<Agency | nul
   const snaps = await getDocs(q);
   if (snaps.empty) return null;
   const docSnap = snaps.docs[0];
-  return { agencyId: docSnap.id, ...(docSnap.data() as any) } as Agency;
+  return { agencyId: docSnap.id, ...(docSnap.data() ) } as Agency;
 };
 
 export const getAgencyById = async (agencyId: string): Promise<Agency | null> => {

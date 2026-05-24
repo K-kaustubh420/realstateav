@@ -35,9 +35,9 @@ import {
 
 import {
   logout,
-} from '@/lib/auth';
+} from '@/auth/userauth';
 
-import LoginModal from '../login/LoginModal';
+import LoginModal from '../user/login/LoginModal';
 
 // Fonts
 const playfair = Playfair_Display({

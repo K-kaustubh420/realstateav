@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, JSX } from 'react';
 import { UserProfile, updateUserProfile, softDeleteUserProfile } from '@/lib/users/profile';
-import { logout } from '@/lib/auth';
+import { logout } from '@/lib/users/userauth';
 import Image from 'next/image';
 
 interface UserProfileSectionProps {
@@ -272,6 +272,7 @@ export default function UserProfileSection({
               <span className="label-text text-zinc-300">I confirm these identity details are valid and belong to me.</span>
             </label>
             <input
+            aria-label='Identiy Consent Checkbox'
               type="checkbox"
               checked={identityConsentAccepted}
               onChange={(e) => setIdentityConsentAccepted(e.target.checked)}
