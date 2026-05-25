@@ -6,6 +6,9 @@ import { auth, db } from "../lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { sendOtpAction, verifyOtpAction, registerAgentDocAction } from "../lib/agents/agentAuthServer";
 
+// 1. IMPORT YOUR INTERFACE HERE
+import { AgentRegisterPayload } from "@/utils/user";
+
 export const useAgentRegister = () => {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -56,21 +59,18 @@ export const useAgentRegister = () => {
         newOtp[index] = value;
         setOtp(newOtp);
 
-        // Auto-focus next input
         if (value && index < 3) {
             const nextInput = document.getElementById(`otp-${index + 1}`);
             nextInput?.focus();
         }
     };
 
-    // Check against 'users' collection
     const checkIfEmailIsUser = async (email: string) => {
         try {
             const usersRef = collection(db, 'users');
             const q = query(usersRef, where('email', '==', email));
             const querySnapshot = await getDocs(q);
             
-            // If document exists, this email belongs to a Client/User
             return !querySnapshot.empty;
         } catch (error) {
             console.error("Error checking user database:", error);
@@ -78,7 +78,6 @@ export const useAgentRegister = () => {
         }
     };
 
-    // Step 1: Validate Form & Send OTP
     const handleRegisterClick = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -96,18 +95,16 @@ export const useAgentRegister = () => {
         const toastId = toast.loading("Checking details...");
 
         try {
-             // 1. CHECK: Is this email already a 'User' (Client)?
              const isClient = await checkIfEmailIsUser(formData.email);
              
              if (isClient) {
-                 toast.error("This email is registered as a Client/Buyer. Please use a different email for your Agent account.", { 
+                 toast.error("This email is registered as a Client/Buyer. Please use a different email.", { 
                      id: toastId,
                      duration: 5000 
                  });
                  return;
              }
 
-             // 2. Send OTP via Server Action
              const res = await sendOtpAction(formData.email);
              
              if (!res.success) throw new Error(res.error || "Failed to send OTP");
@@ -123,7 +120,6 @@ export const useAgentRegister = () => {
         }
     };
 
-    // Step 2: Verify OTP -> Create Auth -> Call DB Server Action
     const handleVerifyOtp = async () => {
         if (otp.some(digit => digit === "")) {
             toast.error("Please enter the full 4-digit code");
@@ -134,7 +130,6 @@ export const useAgentRegister = () => {
         const toastId = toast.loading("Verifying code...");
 
         try {
-             // 1. Verify OTP via Server Action
              const otpCode = otp.join("");
              const resOtp = await verifyOtpAction(formData.email, otpCode);
 
@@ -145,29 +140,64 @@ export const useAgentRegister = () => {
                   throw new Error(resOtp.error || "Invalid OTP Code.");
              }
 
-             // 2. Double check (race condition safety)
              const isClient = await checkIfEmailIsUser(formData.email);
              if (isClient) throw new Error("This email is registered as a Client.");
 
-             // 3. Create User in Firebase Authentication
              toast.loading("Creating account...", { id: toastId });
              const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
              const user = userCredential.user;
 
-             // 4. Call the Agent Register Server Action to save to Firestore
-             const apiRes = await registerAgentDocAction({
+             const nameParts = formData.fullname.trim().split(" ");
+             const firstname = nameParts[0] || "";
+             const lastname = nameParts.slice(1).join(" ") || "";
+
+             // 2. USE THE AGENT INTERFACE HERE
+             const newAgentPayload: AgentRegisterPayload = {
                  uid: user.uid,
                  email: formData.email,
-                 fullname: formData.fullname,
-                 countryCode: formData.countryCode,
-                 mobileNumber: formData.mobileNumber
-             });
+                 name: {
+                     firstname: firstname,
+                     lastname: lastname
+                 },
+                 number: {
+                     countrycode: formData.countryCode,
+                     mobilenumber: formData.mobileNumber
+                 },
+                 role: "agent",
+                 agency: "Null",
+                 preferredLocations: [],
+                 
+                 // UPDATED: Now an object matching your new interface
+                 location: {
+                     longitute: "",
+                     latitute: ""
+                 },
+                 
+                 id_verify: "unverified",
+                 properties: [],
+                 ratings: [],
+                 about: "",
+                 
+                 // UPDATED: Now a string (empty) instead of null
+                 photoURL: "", 
+                 
+                 canaddproperty: false,
+                 canaddagents: false,
+                 onboardingCompleted: false,
+                 membership: {
+                     transaction_id: "none",
+                     status: "pending",
+                     start_date: new Date().toISOString(), 
+                     end_date: new Date().toISOString(),
+                 }
+             };
+
+             const apiRes = await registerAgentDocAction(newAgentPayload);
 
              if (!apiRes.success) {
                  throw new Error(apiRes.error || "Failed to save account details");
              }
 
-             // 5. Success
              toast.success("Account created successfully!", { id: toastId });
              setIsVerified(true);
              setTimeout(() => {
@@ -225,4 +255,4 @@ export const useAgentRegister = () => {
             isConfirming: formData.confirmPassword.length > 0
         }
     };
-};
+}; 

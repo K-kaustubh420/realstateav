@@ -6,6 +6,8 @@ import { Inter, Cinzel } from "next/font/google";
 import "./globals.css";
 
 
+import { AuthProvider } from "@/auth/AuthContext";
+
 // 1. UI/Body Font: Clean, modern, and highly readable.
 const inter = Inter({
   subsets: ["latin"],
@@ -38,9 +40,9 @@ export default function RootLayout({
         // ✨ UPDATED: Applying our new font variables globally.
         className={`${inter.variable} ${cinzel.variable} bg-dark-bg text-white antialiased`}
       >
-  
+        <AuthProvider>
           {children}
-          
+        </AuthProvider>
       </body>
     </html>
   );

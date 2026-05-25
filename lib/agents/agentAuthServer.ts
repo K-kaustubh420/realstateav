@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "../firebase";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc, Timestamp } from "firebase/firestore";
+import { AgentRegisterPayload } from "@/utils/user";
 import { generateAndSendOtp, verifyOtpCode } from "./authotpgen";
 
 /**
@@ -36,40 +37,20 @@ export async function verifyOtpAction(email: string, otp: string): Promise<{ suc
 /**
  * Server Action: Registers the Agent's profile document inside the 'agents' collection.
  */
-export async function registerAgentDocAction(body: {
-  uid: string;
-  email: string;
-  fullname: string;
-  countryCode: string;
-  mobileNumber: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function registerAgentDocAction(body: AgentRegisterPayload): Promise<{ success: boolean; error?: string }> {
   try {
-    const { uid, email, fullname, countryCode, mobileNumber } = body;
+    const { uid, email } = body;
 
     if (!uid || !email) {
-      return { success: false, error: "Missing required fields (uid, email)" };
+      return { success: false, error: "Missing required fields (id, email)" };
     }
 
     const agentRef = doc(db, "agents", uid);
     const agentSnap = await getDoc(agentRef);
 
     if (!agentSnap.exists()) {
-      const names = (fullname || "Agent").split(" ");
-      const firstname = names[0] || "Agent";
-      const lastname = names.slice(1).join(" ") || "";
-
       await setDoc(agentRef, {
-        id: uid,
-        preferredLocations: [],
-        name: {
-          firstname,
-          lastname,
-        },
-        email: email,
-        number: {
-          countrycode: countryCode,
-          mobilenumber: mobileNumber,
-        },
+        ...body,
         address: {
           addressLine1: "",
           addressLine2: "",
@@ -79,24 +60,12 @@ export async function registerAgentDocAction(body: {
           country: "",
         },
         membership: {
-          transaction_id: "",
-          start_date: serverTimestamp(),
-          end_date: serverTimestamp(),
-          status: "pending",
+          ...body.membership,
+          start_date: Timestamp.fromDate(new Date(body.membership.start_date)),
+          end_date: Timestamp.fromDate(new Date(body.membership.end_date)),
         },
-        role: "agent",
-        agency: "",
-        location: "",
-        id_verify: "unverified",
-        properties: [],
-        ratings: [],
-        about: "",
-        photoURL: "",
-        canaddproperty: false,
-        canaddagents: false,
         isAgencyOwner: false,
         createdAt: serverTimestamp(),
-        onboardingCompleted: false,
       });
     }
 

@@ -39,6 +39,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Add all public unauthenticated routes here
     const PUBLIC_ROUTES = [
       "/",
+      "/agentportal",
+      "agencyportal",
       "/agentportal/login",
       "/agentportal/register",
       "/agentportal/forgot-password",
@@ -94,10 +96,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const isAgency = userProfile.isAgencyOwner || role === 'agency';
 
           // 1. Enforce Onboarding
-          // We check if the pathname already includes onboarding to prevent redirect loops
           if (!userProfile.onboardingCompleted && !pathname.includes('onboarding') && !PUBLIC_ROUTES.includes(pathname)) {
               if (role === 'agent') {
-                  router.push('/agentportal/onboarding');
+                  router.push(`/agentportal/onboarding?details=${currentUser.uid}`);
               } else if (isAgency) {
                   router.push('/agencyportal/onboarding');
               } else {
@@ -107,7 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
 
           // 2. Strict Role-Based Guards
-          const isAgencyRoute = pathname.startsWith('/agencyportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
+          const isAgencyRoute = pathname.startsWith('/agency') && !pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
           const isAgentRoute = pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
           
           if (isAgencyRoute && !isAgency) {
@@ -120,9 +121,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
           // Edge case: user is authenticated in Auth but has no Firestore document yet.
           // They should probably be routed to a registration or onboarding flow.
+          // (Disabled redirect to /user/onboarding as it does not exist)
+          /*
           if (!pathname.includes('onboarding') && !PUBLIC_ROUTES.includes(pathname)) {
               router.push('/user/onboarding'); 
           }
+          */
       }
     });
 
@@ -136,7 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, logout: handleLogout }}>
-      {loading ? null : children}
+      {children}
     </AuthContext.Provider>
   );
 };

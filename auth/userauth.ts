@@ -1,34 +1,69 @@
-// lib/users/userauth.ts
+// @/auth/userauth.ts
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  updateProfile, // <-- Added this
+  updateProfile,
 } from "firebase/auth";
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { auth, db, googleProvider } from "@/lib/firebase";
 
+// Import your user interface
+import { User as DBUser } from "@/utils/user"; 
+
 const checkAgent = async (email: string) => {
+  // Note: agents are currently being checked by email here.
   const agentRef = doc(db, "agents", email);
   const agentSnap = await getDoc(agentRef);
   return agentSnap.exists();
 };
 
-// Added fullName parameter
-const createUserDoc = async (uid: string, email: string, fullName?: string) => {
-  const userRef = doc(db, "users", email);
+// Added photoURL to capture Google profile pictures
+const createUserDoc = async (
+  uid: string, 
+  email: string, 
+  name?: string | null, 
+  photoURL?: string | null
+) => {
+  const userRef = doc(db, "users", uid); 
   const userSnap = await getDoc(userRef);
 
   if (!userSnap.exists()) {
-    await setDoc(userRef, {
-      uid,
-      email,
-      fullName: fullName || "User", // Save the name in Firestore
+    // Construct the user object matching your User interface exactly
+    const newUser: DBUser = {
+      uid: uid, // Note: interface uses 'id' instead of 'uid'
+      name: name || "User", // interface uses 'name' instead of 'fullName'
+      email: email,
+      number: {
+        countrycode: "",
+        mobilenumber: "",
+      },
+      intent: "researcher", // Safe default from your literal types
+      exploreintent: [],
       role: "user",
-      createdAt: Date.now(),
-    });
+      Address : {
+        AddressLine1 : "",
+        AddressLine2 : "",
+        City : "",
+        State : "",
+        PostalCode : "",
+        Country : "",
+      },
+      location : {
+        longitute: "", 
+        latitute : "",
+      },
+      about: "",
+      createdAt: Timestamp.now(), // Uses Firebase Timestamp to match interface
+      collection: [],
+      PropertiesVisited: [],
+      photoURL: photoURL ||"",
+      onboardingCompleted: false, // Flag to force them to fill out missing details later
+    };
+
+    await setDoc(userRef, newUser);
   }
 };
 
@@ -42,8 +77,13 @@ export const googleLogin = async () => {
     throw new Error("Agents not allowed here");
   }
 
-  // Pass Google displayName if available
-  await createUserDoc(user.uid, user.email || "", user.displayName || "");
+  // Pass Google displayName and photoURL if available
+  await createUserDoc(
+    user.uid, 
+    user.email || "", 
+    user.displayName, 
+    user.photoURL
+  );
 
   return result;
 };
@@ -56,13 +96,17 @@ export const login = async (email: string, password: string) => {
 
   const result = await signInWithEmailAndPassword(auth, email, password);
 
-  // We don't need to pass fullName on login since the doc should already exist
-  await createUserDoc(result.user.uid, result.user.email || "");
+  // Fallback check to ensure the doc exists
+  await createUserDoc(
+    result.user.uid, 
+    result.user.email || "", 
+    result.user.displayName, 
+    result.user.photoURL
+  );
 
   return result;
 };
 
-// Added fullName parameter
 export const signup = async (email: string, password: string, fullName: string) => {
   const isAgent = await checkAgent(email);
   if (isAgent) {
@@ -76,8 +120,8 @@ export const signup = async (email: string, password: string, fullName: string) 
     await updateProfile(result.user, { displayName: fullName });
   }
 
-  // Pass the fullName to be saved in Firestore
-  await createUserDoc(result.user.uid, result.user.email || "", fullName);
+  // Pass the fullName to be saved in Firestore. No photoURL on manual signup yet.
+  await createUserDoc(result.user.uid, result.user.email || "", fullName, null);
 
   return result;
 };

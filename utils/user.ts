@@ -1,5 +1,5 @@
+// @/utils/user.ts 
 import { Timestamp } from "firebase/firestore";
-
 export interface User {
     name : string; 
     email : string; 
@@ -10,13 +10,24 @@ export interface User {
     intent :"buyer" | "seller" | "renter" | "researcher" | "homeowner";
     exploreintent: string[];
     role : "user" | "agent";
-    location : string; 
+    Address : {
+        AddressLine1 : string;
+        AddressLine2 : string;
+        City : string;
+        State : string;
+        PostalCode : string;
+        Country : string;
+    } 
+    location : {
+       longitute: string; 
+       latitute : string;
+    }
     about : string;
-    id : string; 
+    uid : string; 
     createdAt: Timestamp;
     collection : string[];
     PropertiesVisited : string[]; 
-    photoURL : string | null; 
+    photoURL : string; 
     onboardingCompleted? : boolean;
 } 
 
@@ -28,7 +39,6 @@ export interface User {
 export interface Agent {
     preferredLocations: string[]; 
     name : {
-        split(arg0: string): unknown;
         firstname : string;
         lastname : string;
     }
@@ -38,7 +48,7 @@ export interface Agent {
         mobilenumber: string;
     }; 
     agency : string | "Null" | "inhouse"; 
-    id : string; 
+    uid : string; 
     role : "agent" | "agency"; 
     membership: {
          transaction_id: string; 
@@ -47,12 +57,16 @@ export interface Agent {
             status: "active" | "inactive" | "pending" | "cancelled";
 
     };
-    location : string; 
+    
+    location : {
+       longitute: string; 
+       latitute : string;
+    }
      id_verify : "unverified" | "pending" | "verified" | "rejected"; 
     properties : string[]; 
     ratings : number[]; 
     about : string; 
-    photoURL : string | null; 
+    photoURL : string; 
    AgencyDetails? : { 
     agencyname:string;
     agencycode: string;
@@ -83,15 +97,24 @@ export interface Agent {
      isAgencyOwner?: boolean;
      addedagents? : string[];
      onboardingCompleted?: boolean;
-     address?: {
+    Address?: {
         addressLine1: string;
         addressLine2?: string;
         city: string;
         state: string;
         postalCode: string;
         country: string;
-     };
-} 
+    };
+}
+
+export interface AgentRegisterPayload extends Omit<Agent, 'membership'> {
+    membership: {
+        transaction_id: string;
+        status: "active" | "inactive" | "pending" | "cancelled";
+        start_date: string;
+        end_date: string;
+    };
+}
 
 export interface Admin { 
     email:  string; 

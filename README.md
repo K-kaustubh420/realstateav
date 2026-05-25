@@ -22,6 +22,13 @@ The architecture is built on **Next.js** with a **Firebase** backend. We utilize
 
 ## 2. Architecture & Technical Design
 
+### Next.js Server Actions Design Pattern
+We utilize Next.js Server Actions (`'use server'`) for handling security-sensitive and server-only modules (such as Firestore admin-like writes and Nodemailer email processing). All REST API routes (previously in `/app/api`) have been eliminated. This reduces cold starts, simplifies logic deployment, and protects endpoints from external exposure.
+
+### Global Authentication Context
+We utilize a global `AuthProvider` wrapped at the root layout level (`app/layout.tsx`). The context manages the Firebase Auth listener, fetches the active user's role-based database profile (Agent or User), and handles route guards (e.g., blocking non-agents from entering `/agentportal/dashboard`). 
+* **Self-Handling Page Loading:** To optimize rendering speed, avoid hydration flashes, and allow pages to customize their own loading/skeleton UIs, the global `AuthContext` does not contain any layout-blocking loaders or spinners. It renders children immediately while exposing `loading` state through context variables.
+
 ### Hybrid Database Architecture: Firestore + Realtime Database
 We use a hybrid approach to maximize scalability, minimize costs, and ensure real-time responsiveness.
 
@@ -52,6 +59,19 @@ Conversations use a strictly typed `conversationContext` (e.g., `property_listin
 Before users can create property drafts or initiate conversations, they must complete lightweight identity verification (Phone, Government ID, Consent). 
 * **Why?** This prevents spam, protects agent time, and acts as a trust-and-safety layer for property ownership claims. Users self-declare consent, locking in their identity before interacting with the ecosystem.
 
+### Agent Registration & OTP Verification Flow (Server Actions)
+To protect agent onboarding and secure contact detail confirmation, we leverage a Next.js Server Actions workflow:
+1. **Validation & Verification Request:** The agent fills out the registration form. The custom client hook `useAgentRegister` invokes `sendOtpAction` (a Server Action).
+2. **Secure OTP Generation:** The server generates a 4-digit OTP, stores it with a 45-second expiry in a temporary `otps` Firestore collection, and sends it via Nodemailer. In local development, the code prints directly to the console output to bypass SMTP dependency.
+3. **Account Provisioning:** The agent enters the OTP, which is verified by `verifyOtpAction`. Upon success, the client creates their account in Firebase Authentication and triggers `registerAgentDocAction` to write their fully structured profile matching the `Agent` schema into the Firestore `agents` collection, keyed by their Firebase Auth `uid`.
+
+### Mandatory Agent Onboarding Flow
+After successful registration, an agent is not immediately granted access to the dashboard. The `AuthContext` enforces a strict redirection to `/agentportal/onboarding` if the `onboardingCompleted` flag is false.
+1. **Step 1 (Personal):** Users provide their bio and name details.
+2. **Step 2 (Location):** Agents supply their operational address. We utilize OpenStreetMap reverse-geocoding via the `navigator.geolocation` API to auto-fill address details.
+3. **Step 3 (ID Verification):** Agents are encouraged to verify their government IDs (which links to the dedicated `id_verification` isolated service).
+4. **Step 4 (Review & Submit):** A Server Action (`completeAgentOnboardingAction`) updates the Firestore document, finally setting `onboardingCompleted: true` to unlock the dashboard.
+
 ### Property Lifecycle & Ownership Transfer
 1. **User Drafts Property:** A user submits a property they want to sell/rent. It enters the centralized database with `status = "draft"`, `userId = {user.uid}`, and `agentId = null`. It does NOT appear on the public marketplace.
 2. **Agent Claims Property:** An agent reviews the draft via their dashboard. They verify the user's identity details and click "Contact User". Once terms are agreed, the agent clicks "Claim & List".
@@ -71,6 +91,7 @@ Agents can create or join Agencies. When an agent creates a property listing, th
 ## 4. Scalability, Safety & Edge Cases
 
 * **Concurrency Safety:** Core actions (claiming a property, joining an agency) are protected by specific queries and state-loading disables to prevent double-submissions.
+* **Type Collision Prevention (DBUser):** To avoid namespace clashes with DOM declarations or Firebase Auth interfaces, the local user profile is imported and aliased as `DBUser` in authentication managers.
 * **Modular Separation:** By completely separating User hooks (`lib/users`) from Agent hooks (`lib/agents`), we ensure that a bug in the user portal cannot accidentally expose agent admin privileges.
 * **Realtime Responsiveness vs Memory:** The `ChatWidget` is designed to completely detach Realtime listeners when closed. Persistent global listeners are avoided to prevent memory leaks during large traffic spikes.
 * **Traffic Spike Resilience:** Because the public marketplace is a simple Firestore read of `status == "active"`, and chats are offloaded to RTDB, the system can handle massive user spikes without choking the database throughput.

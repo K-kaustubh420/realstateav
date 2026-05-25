@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, JSX } from 'react';
 import { UserProfile, updateUserProfile, softDeleteUserProfile } from '@/lib/users/profile';
-import { logout } from '@/lib/users/userauth';
+import { logout } from '@/auth/userauth';
 import Image from 'next/image';
 
 interface UserProfileSectionProps {

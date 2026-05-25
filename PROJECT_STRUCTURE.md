@@ -24,6 +24,8 @@ This document provides a **complete, lay‑person‑friendly walkthrough** of th
 ```
 realstateav/
 ├─ app/                # Next.js pages, routes, and UI components
+├─ auth/               # Authentication Context and helpers (user and agent)
+├─ hooks/              # Custom React hooks (useAgent, useAgency, etc.)
 ├─ lib/                # Core TypeScript libraries (business logic, DB ops)
 ├─ public/             # Static assets (favicons, images)
 ├─ .env.local          # Local environment variables (Firebase config, etc.)
@@ -48,6 +50,7 @@ realstateav/
 | `app/user/` | User‑side dashboards and pages | UI components, `lib/users/*` | Provides marketplace browsing, draft property creation, and user chat UI. |
 | `app/components/` | Reusable UI widgets (e.g., `ChatWidget`) | `lib/firebase`, `lib/chat/types` | Central place for UI that appears across both user & agent portals. |
 | `app/agents/components/` | Agent‑specific UI pieces (agency list, property cards, chat section) | `lib/agents/*` | Isolated to keep agent UI separate from user UI. |
+| `app/agentportal/onboarding/` | Agent Onboarding flow & UI steps | `lib/agents/onboarding/*` | Forces newly registered agents to complete their profile setup before accessing the dashboard. |
 | `app/user/dashboard/` | User dashboard pages and sections (profile, property list, chats) | `lib/users/*` | Core entry point for a logged‑in user. |
 | `app/layout.tsx` | Global layout (navbar, theming) | — | Wraps all pages; removing breaks navigation. |
 | `app/page.tsx` (root) | Home page / landing page | — | Entry point for visitors. |
@@ -78,10 +81,28 @@ The `lib/` folder is the **brain** of the application. All data manipulation, sa
   * `properties.ts` – CRUD for user‑draft properties, plus ownership handling.
 - **`lib/agents/*.ts`** – Agent‑specific functionality:
   * `chat.ts` – Mirrors user chat helpers but adds `property_listing` context handling.
+  * `onboarding/` – Logic and Server Actions for completing agent onboarding.
   * `agency.ts` – Agency creation, joining, and ownership transfer logic.
   * `properties.ts` – Functions for agents to claim, list, and modify properties.
+  * `agentAuthServer.ts` – Server Actions (`sendOtpAction`, `verifyOtpAction`, `registerAgentDocAction`) marked with `'use server'` for secure transactions.
+  * `authotpgen.ts` – Core OTP generation, Firestore temporary storage, and Nodemailer email delivery flow.
 - **`lib/properties/*`** – Shared utilities for property status updates, image handling, and validation.
 - **`lib/agency.ts`** – Core agency management (create, join, leave, transfer ownership).
+
+---
+
+## 3.1 `auth/` & `hooks/` – Authentication and State Management Layers
+
+### `auth/` Directory
+- **`auth/AuthContext.tsx`** – React Auth Provider wrapping the Next.js app globally in the root layout (`app/layout.tsx`). It supplies user auth state (`user`, `profile`, `loading`) and checks role-based route guards without blocking page layouts or displaying loading screens (allowing sub-pages to render immediately and handle their own loading states).
+- **`auth/userauth.ts`** – Client-side user auth logic for standard/Google sign-in, registration, and logout. Employs `DBUser` alias to avoid type collisions with standard Firebase Auth types.
+- **`auth/agentAuth.ts`** – Refactored helper supplying only the client-side `agentLogout` utility.
+
+### `hooks/` Directory
+- **`hooks/useAgentRegister.ts`** – Custom hook orchestrating agent sign-up logic (timer, OTP confirmation, and Server Actions).
+- **`hooks/useAgentLogin.ts`** – Custom hook managing agent email/Google login forms and validation against Firestore user/agent roles.
+- **`hooks/useAgent.ts`** – State listener that fetches and verifies the agent's database document based on current Auth state.
+- **`hooks/useAgency.ts`** – Manages state for the agent's associated Agency details.
 
 ### Why This Separation?
 
