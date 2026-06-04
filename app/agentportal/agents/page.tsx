@@ -21,7 +21,7 @@ export default function AgentDashboardRedirectPage() {
         const agent = await getAgentData(user.uid, user.email);
         if (agent) {
           const slug = generateAgentSlug({ ...agent, uid: user.uid });
-          router.replace(`/agentportal/agents/${slug}`);
+          router.replace(`/agentportal/agents/${slug}?view=dashboard`);
         } else {
           router.replace("/agentportal/login");
         }

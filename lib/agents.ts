@@ -1,35 +1,9 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
-export type VerificationStatus = "none" | "pending" | "approved" | "rejected";
+import { Agent } from "@/utils/user";
 
-export type AgentData = {
-  uid: string;
-  email: string;
-  role: "agent";
-  isVerified?: boolean;
-  verificationRequested?: boolean;
-  verificationStatus?: VerificationStatus;
-  verificationIssue?: string;
-  fullName?: string;
-  dob?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-  gpsLocation?: {
-    lat: number;
-    lng: number;
-  };
-  idType?: string;
-  idNumber?: string;
-  idPhotoUrl?: string;
-  selfieWithIdUrl?: string;
-  profilePhotoUrl?: string;
-  submittedAt?: number | null;
-  createdAt?: number;
-};
+export type VerificationStatus = "none" | "pending" | "approved" | "rejected";
 
 import { collection, query, where, getDocs } from "firebase/firestore";
 
@@ -56,7 +30,7 @@ export const getAgentDocRef = async (uid: string, email?: string | null) => {
   return doc(db, "agents", uid); // fallback
 };
 
-export const getAgentData = async (uid: string, email?: string | null): Promise<AgentData | null> => {
+export const getAgentData = async (uid: string, email?: string | null): Promise<Agent | null> => {
   const agentRef = await getAgentDocRef(uid, email);
   const snapshot = await getDoc(agentRef);
 
@@ -64,7 +38,7 @@ export const getAgentData = async (uid: string, email?: string | null): Promise<
     return null;
   }
 
-  const data = snapshot.data() as AgentData;
+  const data = snapshot.data() as Agent;
   if (!data.uid) {
     data.uid = uid;
   }

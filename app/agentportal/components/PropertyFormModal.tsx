@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { Property, PropertyScene, PropertyStatus } from "@/lib/properties/property.types";
-import { AgentData } from "@/lib/agents";
+import { Agent } from "@/utils/user";
 import { createProperty } from "@/lib/properties/createProperty";
 import { updateProperty } from "@/lib/properties/updateProperty";
 
 interface PropertyFormModalProps {
   property?: Property | null;
-  agentData: AgentData;
+  agentData: Agent;
   activeAgency: { agencyId: string; agencyName: string } | null;
   onClose: () => void;
   onSave: () => void;
@@ -125,9 +125,9 @@ export default function PropertyFormModal({
         setListAs("agency");
       }
       // Populate GPS defaults if agent has them
-      if (agentData.gpsLocation) {
-        setLat(agentData.gpsLocation.lat);
-        setLng(agentData.gpsLocation.lng);
+      if (agentData.location) {
+        setLat(parseFloat(agentData.location.latitute) || 37.7749);
+        setLng(parseFloat(agentData.location.longitute) || -122.4194);
       }
     }
   }, [property, activeAgency, agentData]);
@@ -237,7 +237,7 @@ export default function PropertyFormModal({
       } else {
         await createProperty(payload, {
           uid: agentData.uid,
-          fullName: agentData.fullName || "Unknown Agent",
+          fullName: `${agentData.name?.firstname || ""} ${agentData.name?.lastname || ""}`.trim() || "Unknown Agent",
         });
       }
       onSave();

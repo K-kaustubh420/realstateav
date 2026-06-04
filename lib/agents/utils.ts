@@ -1,18 +1,14 @@
-import { AgentData } from "@/lib/agents";
+import { Agent } from "@/utils/user";
 
 /**
  * Generates a URL-friendly slug for the agent dashboard.
  * Format: {first-name}-{uid} (fallback to "agent-{uid}")
  */
-export const generateAgentSlug = (agentData: Partial<AgentData> & { uid: string }): string => {
+export const generateAgentSlug = (agentData: Partial<Agent> & { uid: string }): string => {
   let namePart = "agent";
   
-  if (agentData.fullName) {
-    const parts = agentData.fullName.trim().split(" ");
-    if (parts.length > 0) {
-      // Use the first name
-      namePart = parts[0].toLowerCase().replace(/[^a-z0-9]/g, "");
-    }
+  if (agentData.name?.firstname) {
+    namePart = agentData.name.firstname.toLowerCase().replace(/[^a-z0-9]/g, "");
   }
 
   // Fallback if the name was entirely special characters

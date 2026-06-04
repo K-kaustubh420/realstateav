@@ -96,12 +96,9 @@ export const useAgentLogin = () => {
     const returnUrl = searchParams?.get("redirect");
     if (returnUrl) {
       router.push(returnUrl);
-    } else if (agentData.verificationStatus === "approved") {
-      const slug = generateAgentSlug(agentData);
-      router.push(`/agentportal/agents/${slug}?view=dashboard`);
     } else {
       const slug = generateAgentSlug(agentData);
-      router.push(`/agentportal/agents/${slug}`);
+      router.push(`/agentportal/agents/${slug}?view=dashboard`);
     }
   };
 

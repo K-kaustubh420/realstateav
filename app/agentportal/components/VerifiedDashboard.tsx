@@ -83,11 +83,11 @@ export default function VerifiedDashboard({ email }: VerifiedDashboardProps) {
           <div className="rounded-2xl border border-white/10 bg-zinc-950/85 p-8 shadow-[0_30px_90px_-55px_rgba(0,0,0,0.7)] backdrop-blur-2xl sm:p-10">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
               <div className="max-w-3xl">
-                <p className="text-xs uppercase tracking-[0.36em] text-slate-500">Verified Agent Dashboard</p>
+                <p className="text-xs uppercase tracking-[0.36em] text-slate-500">Agent Dashboard</p>
                 <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white">A refined dashboard for premium real estate teams.</h1>
               </div>
               <div className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-4 py-2 text-sm font-semibold text-[#D4AF37]">
-                Verified access
+                Premium access
               </div>
             </div>
             <p className="mt-5 max-w-2xl text-slate-400">Corporate-grade interface designed to support high-end listings and luxury client workflows.</p>
