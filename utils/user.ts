@@ -37,6 +37,7 @@ export interface User {
  * on the `agents` collection with fields: `id` (ASC) and `onboardingCompleted` (ASC).
  */
 export interface Agent {
+  fullName: string;
     preferredLocations: string[]; 
     name : {
         firstname : string;

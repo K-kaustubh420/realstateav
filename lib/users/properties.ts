@@ -201,6 +201,19 @@ export const fetchActiveProperties = async (
 };
 
 /**
+ * Fetches a single property by ID.
+ */
+export const fetchPropertyById = async (propertyId: string): Promise<Property | null> => {
+  if (!propertyId) return null;
+  const propertyRef = doc(db, "properties", propertyId);
+  const snap = await getDoc(propertyRef);
+  if (snap.exists()) {
+    return snap.data() as Property;
+  }
+  return null;
+};
+
+/**
  * Toggles user interest in a property doc.
  */
 export const toggleInterest = async (

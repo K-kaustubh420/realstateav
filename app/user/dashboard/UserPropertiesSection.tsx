@@ -16,8 +16,8 @@ interface UserPropertiesSectionProps {
   userEmail: string;
   userId: string;
   userName?: string;
-  activeTab: 'buy-rent' | 'my-properties' | 'list-property';
-  onNavigateTab: (tab: 'buy-rent' | 'my-properties' | 'list-property') => void;
+  activeTab: 'my-properties' | 'list-property';
+  onNavigateTab: (tab: 'my-properties' | 'list-property') => void;
 }
 
 export default function UserPropertiesSection({
@@ -75,9 +75,7 @@ export default function UserPropertiesSection({
   };
 
   useEffect(() => {
-    if (activeTab === 'buy-rent') {
-      loadMarketplace(marketplaceFilter);
-    } else if (activeTab === 'my-properties') {
+    if (activeTab === 'my-properties') {
       loadMyProperties();
     } else if (activeTab === 'list-property') {
       // List property acts as a trigger to open the modal and defaults to My Properties page
@@ -85,7 +83,7 @@ export default function UserPropertiesSection({
       setIsDraftModalOpen(true);
       onNavigateTab('my-properties');
     }
-  }, [activeTab, marketplaceFilter]);
+  }, [activeTab]);
 
   // Handle Edit Draft
   const handleEditDraftClick = (property: Property) => {
@@ -117,11 +115,7 @@ export default function UserPropertiesSection({
     try {
       await toggleInterest(propertyId, userId, !currentlyInterested);
       // Refresh current active view
-      if (activeTab === 'buy-rent') {
-        await loadMarketplace(marketplaceFilter);
-      } else {
-        await loadMyProperties();
-      }
+      await loadMyProperties();
     } catch (err: any) {
       setError(err.message || 'Failed to update interest status.');
     } finally {
@@ -198,174 +192,6 @@ export default function UserPropertiesSection({
         </div>
       )}
 
-      {/* 1. BUY / MOVE IN RENT - MARKETPLACE BROWSING */}
-      {activeTab === 'buy-rent' && (
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900 p-4 border border-zinc-800 rounded-xl">
-            {/* Filter buttons */}
-            <div className="flex gap-2">
-              {(['all', 'sale', 'rental'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setMarketplaceFilter(tab)}
-                  className={`btn btn-sm rounded-full font-semibold px-4 capitalize ${
-                    marketplaceFilter === tab
-                      ? 'bg-warning text-black border-none'
-                      : 'btn-ghost text-zinc-300 hover:text-white'
-                  }`}
-                >
-                  {tab === 'all' ? 'All Active' : tab === 'sale' ? 'For Sale' : 'For Rent'}
-                </button>
-              ))}
-            </div>
-
-            {/* Suburb/City Search and Type Filters */}
-            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-              <input
-                type="text"
-                placeholder="Search city or location..."
-                value={searchCity}
-                onChange={(e) => setSearchCity(e.target.value)}
-                className="input input-bordered input-sm bg-zinc-850 border-zinc-700 text-white w-full sm:w-48"
-              />
-              <select
-                value={searchType}
-                onChange={(e) => setSearchType(e.target.value)}
-                className="select select-bordered select-sm bg-zinc-850 border-zinc-700 text-white w-full sm:w-36"
-              >
-                {propertyTypesForMarketplace.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <span className="loading loading-spinner loading-md text-warning"></span>
-            </div>
-          ) : filteredActiveProperties.length === 0 ? (
-            <div className="text-center py-12 text-zinc-500">
-              No active listings match your current filters.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredActiveProperties.map((property) => {
-                const isUserInterested = (property as any).interestedUserIds?.includes(userId) || false;
-                const firstImage = property.images && property.images.length > 0 ? property.images[0] : null;
-
-                return (
-                  <div
-                    key={property.id}
-                    className="card bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-all flex flex-col h-full"
-                  >
-                    <div className="relative w-full h-48 bg-zinc-800 flex items-center justify-center text-zinc-600">
-                      {firstImage ? (
-                        <Image
-                          src={firstImage}
-                          alt={property.title || 'Property Image'}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center gap-2">
-                          <span className="text-4xl">🏢</span>
-                          <span className="text-xs uppercase tracking-wider text-zinc-500 font-bold">
-                            No Photo Available
-                          </span>
-                        </div>
-                      )}
-                      <span
-                        className={`absolute top-3 right-3 badge font-bold text-xs uppercase ${
-                          property.property_scene === 'on_rent' || property.property_scene === 'sell_and_rent'
-                            ? 'badge-info text-black'
-                            : 'badge-success text-black'
-                        }`}
-                      >
-                        {property.property_scene === 'on_rent' ? 'For Rent' : 'For Sale'}
-                      </span>
-                    </div>
-
-                    <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-start gap-2">
-                          <h4 className="font-bold text-white text-base line-clamp-1">
-                            {property.title}
-                          </h4>
-                        </div>
-                        <p className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                          {property.propertyType} • {property.location}, {property.city}
-                        </p>
-                        <p className="text-lg font-black text-warning">
-                          ${property.expectedPrice.toLocaleString()}
-                          {property.property_scene === 'on_rent' && <span className="text-xs font-normal"> /mo</span>}
-                        </p>
-                      </div>
-
-                      <div className="flex gap-4 text-xs text-zinc-400 border-t border-zinc-800/80 pt-3">
-                        {property.bhk && <span>{property.bhk} BHK</span>}
-                        {property.bedrooms && <span>{property.bedrooms} Beds</span>}
-                        {property.bathrooms && <span>{property.bathrooms} Baths</span>}
-                        {property.carpetArea && <span>{property.carpetArea} sqft</span>}
-                      </div>
-
-                      <p className="text-xs text-zinc-400 line-clamp-2 h-8">{property.description}</p>
-
-                      <div className="flex items-center justify-between gap-3 pt-2">
-                        {property.agentName ? (
-                          <div className="text-left">
-                            <p className="text-[10px] text-zinc-500 font-bold uppercase">Managing Agent</p>
-                            <p className="text-xs font-semibold text-white">{property.agentName}</p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-zinc-500 italic">No agent assigned</span>
-                        )}
-
-                        <div className="flex gap-2">
-                          {property.agentId && (
-                            <button
-                              onClick={() => handleStartConversation(property)}
-                              className="btn btn-xs rounded-full font-bold px-3 btn-outline border-zinc-700 text-zinc-300 hover:bg-warning hover:text-black hover:border-none"
-                              disabled={actionLoading === `chat_${property.id}`}
-                            >
-                              {actionLoading === `chat_${property.id}` ? (
-                                <span className="loading loading-spinner loading-xs"></span>
-                              ) : (
-                                '💬 Contact Agent'
-                              )}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleToggleInterestClick(property.id, isUserInterested)}
-                            className={`btn btn-xs rounded-full font-bold px-3 ${
-                              isUserInterested
-                                ? 'bg-rose-600 hover:bg-rose-700 text-white border-none'
-                                : 'btn-outline border-zinc-700 text-zinc-300 hover:bg-warning hover:text-black hover:border-none'
-                            }`}
-                            disabled={actionLoading === property.id}
-                          >
-                            {actionLoading === property.id ? (
-                              <span className="loading loading-spinner loading-xs"></span>
-                            ) : isUserInterested ? (
-                              '❤️ Interested'
-                            ) : (
-                              '🤍 Mark Interested'
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 2. MY PROPERTIES - LISTINGS AND INTERESTED */}
       {activeTab === 'my-properties' && (
@@ -406,7 +232,7 @@ export default function UserPropertiesSection({
                       key={property.id}
                       className="card bg-zinc-900 border border-zinc-850 p-4 rounded-xl flex flex-col sm:flex-row gap-4"
                     >
-                      <div className="relative w-full sm:w-32 h-24 bg-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center text-zinc-600">
+                      <div className="relative w-full sm:w-32 h-24 bg-zinc-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-zinc-600">
                         {firstImage ? (
                           <Image
                             src={firstImage}
@@ -510,7 +336,7 @@ export default function UserPropertiesSection({
                       key={property.id}
                       className="card bg-zinc-900 border border-zinc-850 p-4 rounded-xl flex flex-col sm:flex-row gap-4"
                     >
-                      <div className="relative w-full sm:w-32 h-24 bg-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center text-zinc-600">
+                      <div className="relative w-full sm:w-32 h-24 bg-zinc-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-zinc-600">
                         {firstImage ? (
                           <Image
                             src={firstImage}

@@ -15,12 +15,13 @@ const playfair = Playfair_Display({
   variable: '--font-playfair',
 });
 
-type TabType = 'buy-rent' | 'my-properties' | 'list-property' | 'profile' | 'chats';
+  // Updated TabType without marketplace
+  type TabType = 'my-properties' | 'list-property' | 'profile' | 'chats';
 
 export default function UserDashboardPage(): JSX.Element {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('buy-rent');
+    const [activeTab, setActiveTab] = useState<TabType>('my-properties');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -32,7 +33,7 @@ export default function UserDashboardPage(): JSX.Element {
   }, []);
 
   // Callback to handle tab switching from child components
-  const handleNavigateTab = (tab: 'buy-rent' | 'my-properties' | 'list-property' | 'chats') => {
+  const handleNavigateTab = (tab: 'my-properties' | 'list-property' | 'chats') => {
     setActiveTab(tab);
   };
 
@@ -87,25 +88,24 @@ export default function UserDashboardPage(): JSX.Element {
 
         {/* Navigation Tabs */}
         <div className="flex border-b border-zinc-800 overflow-x-auto whitespace-nowrap scrollbar-none gap-2">
-          {(
-            [
-              { id: 'buy-rent', label: '🛒 Marketplace', val: 'buy-rent' },
-              { id: 'my-properties', label: '📁 My Listings & Favorites', val: 'my-properties' },
-              { id: 'chats', label: '💬 Messages', val: 'chats' },
-              { id: 'profile', label: '👤 Profile Settings', val: 'profile' },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.val as TabType)}
-              className={`py-3 px-4 sm:px-6 font-bold text-sm border-b-2 transition-all capitalize ${activeTab === tab.val
-                ? 'border-warning text-warning'
-                : 'border-transparent text-zinc-400 hover:text-white hover:border-zinc-700'
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            {(
+              [
+                { id: 'my-properties', label: '📁 My Listings & Favorites', val: 'my-properties' },
+                { id: 'chats', label: '💬 Messages', val: 'chats' },
+                { id: 'profile', label: '👤 Profile Settings', val: 'profile' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.val as TabType)}
+                className={`py-3 px-4 sm:px-6 font-bold text-sm border-b-2 transition-all capitalize ${activeTab === tab.val
+                  ? 'border-warning text-warning'
+                  : 'border-transparent text-zinc-400 hover:text-white hover:border-zinc-700'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
         </div>
 
         {/* Dashboard Sections Content */}
