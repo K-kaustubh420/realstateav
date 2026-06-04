@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { generateAgentSlug } from "@/lib/agents/utils";
 
 export const useAgentLogin = () => {
   const router = useRouter();
@@ -84,18 +85,23 @@ export const useAgentLogin = () => {
           console.error("Failed to auto-update agent UID:", e);
         }
       }
+      agentDoc.uid = uid;
       return agentDoc;
     }
 
     return null;
   };
 
-  const handleSuccessRedirect = (uid: string) => {
+  const handleSuccessRedirect = (agentData: any) => {
     const returnUrl = searchParams?.get("redirect");
     if (returnUrl) {
       router.push(returnUrl);
+    } else if (agentData.verificationStatus === "approved") {
+      const slug = generateAgentSlug(agentData);
+      router.push(`/agentportal/agents/${slug}?view=dashboard`);
     } else {
-      router.push("/agentportal/dashboard");
+      const slug = generateAgentSlug(agentData);
+      router.push(`/agentportal/agents/${slug}`);
     }
   };
 
@@ -113,7 +119,7 @@ export const useAgentLogin = () => {
         throw new Error("unauthorized_agent");
       }
 
-      handleSuccessRedirect(user.uid);
+      handleSuccessRedirect(agentData);
     } catch (err: any) {
       console.error("Login Check Failed:", err);
       await signOut(auth); // Force sign out
@@ -147,7 +153,7 @@ export const useAgentLogin = () => {
         return;
       }
 
-      handleSuccessRedirect(user.uid);
+      handleSuccessRedirect(agentData);
     } catch (err: any) {
       console.error("Google Login Error:", err);
       if (err.code === 'auth/popup-closed-by-user') {
