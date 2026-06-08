@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { completeAgentOnboardingAction } from "@/lib/agents/onboarding/onboardingActions";
+import { generateAgentSlug } from "@/lib/agents/utils";
 
 export interface OnboardingData {
   firstname: string;
@@ -148,8 +149,17 @@ export const useAgentOnboarding = () => {
         throw new Error(res.error || "Failed to complete onboarding.");
       }
 
-      toast.success("Welcome aboard!", { id: toastId });
-      router.push("/agentportal/dashboard");
+      toast.success("Profile saved successfully!", { id: toastId });
+      
+      const verifyChoice = typeof window !== "undefined" ? localStorage.getItem("id_verify_choice") : null;
+      if (typeof window !== "undefined") localStorage.removeItem("id_verify_choice");
+
+      if (verifyChoice === "verify_now") {
+        router.push(`/id_verification/agent_${uid}?uid=${uid}`);
+      } else {
+        const correctSlug = generateAgentSlug({ ...formData, uid } as any);
+        router.push(`/agentportal/agents/${correctSlug}?view=dashboard`);
+      }
     } catch (err: any) {
       toast.error(err.message || "Something went wrong.", { id: toastId });
     } finally {

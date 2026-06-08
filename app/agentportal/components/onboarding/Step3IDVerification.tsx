@@ -36,12 +36,17 @@ export default function Step3IDVerification({ onboarding }: { onboarding: any })
         </p>
 
         <div className="flex flex-col gap-4 mt-8 w-full max-w-xs relative">
-          <Link 
-            href={`/id_verification/agent_agentid?uid=${uid}`}
+          <button 
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('id_verify_choice', 'verify_now');
+              }
+              nextStep();
+            }}
             className="w-full py-3 bg-black text-white dark:bg-white dark:text-black font-semibold rounded-full hover:opacity-80 transition-opacity"
           >
             Verify ID Now
-          </Link>
+          </button>
           
           <div className="relative flex items-center py-2">
             <div className="flex-grow border-t border-gray-200 dark:border-gray-800"></div>
@@ -50,7 +55,12 @@ export default function Step3IDVerification({ onboarding }: { onboarding: any })
           </div>
           
           <button 
-            onClick={nextStep} 
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('id_verify_choice', 'skip_for_now');
+              }
+              nextStep();
+            }} 
             className="w-full py-3 flex items-center justify-center gap-2 border border-black text-black dark:border-white dark:text-white font-semibold rounded-full hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
           >
             <Clock size={16} />

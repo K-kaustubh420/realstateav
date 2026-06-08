@@ -65,7 +65,7 @@ export default function AgencyPage() {
 
       // verify account is an agent with approved status
       const a = await getAgentData(user.email);
-      if (!a || a.role !== "agent" || a.verificationStatus !== "approved") {
+      if (!a || a.role !== "agent" || a.id_verify !== "verified") {
         setError("Only verified agents may sign in here.");
         await signOut(auth);
         return;
@@ -153,7 +153,7 @@ export default function AgencyPage() {
   }
 
   // 3. Agent not verified
-  if (agentData.verificationStatus !== "approved") {
+  if (agentData.id_verify !== "verified") {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
         <div className="rounded-2xl border border-white/6 bg-slate-900/80 px-8 py-10 text-center shadow-lg backdrop-blur-xl">

@@ -46,22 +46,24 @@ realstateav/
 
 | Path | Purpose | Dependencies | Why It Must Stay |
 |------|---------|--------------|-----------------|
-| `app/agents/` | Agent‑side dashboards and pages | UI components, `lib/agents/*` | Handles agent onboarding, verification, property management, and chat UI. |
+| `app/agentportal/` | Agent CRM dashboards and pages | UI components, `lib/agents/*` | Handles agent onboarding, verification, property management, and chat UI. |
 | `app/user/` | User‑side dashboards and pages | UI components, `lib/users/*` | Provides marketplace browsing, draft property creation, and user chat UI. |
 | `app/components/` | Reusable UI widgets (e.g., `ChatWidget`) | `lib/firebase`, `lib/chat/types` | Central place for UI that appears across both user & agent portals. |
-| `app/agents/components/` | Agent‑specific UI pieces (agency list, property cards, chat section) | `lib/agents/*` | Isolated to keep agent UI separate from user UI. |
+| `app/agentportal/components/` | Agent CRM specific UI (agency list, property cards, chat section, AgentWorkbench) | `lib/agents/*` | Isolated 3-column UI for the professional agent experience. |
 | `app/agentportal/onboarding/` | Agent Onboarding flow & UI steps | `lib/agents/onboarding/*` | Forces newly registered agents to complete their profile setup before accessing the dashboard. |
 | `app/user/dashboard/` | User dashboard pages and sections (profile, property list, chats) | `lib/users/*` | Core entry point for a logged‑in user. |
 | `app/layout.tsx` | Global layout (navbar, theming) | — | Wraps all pages; removing breaks navigation. |
 | `app/page.tsx` (root) | Home page / landing page | — | Entry point for visitors. |
+| `app/id_verification/` | Isolated KYC/ID Verification flows | `lib/id_verify/*` | Separate UI specifically for collecting agent/agency legal documents, selfies, and metadata securely. |
+| `app/admin/id_verify/` | Admin Dashboard for KYC Reviews | `lib/id_verify/*` | Allows admins to review pending KYC requests, verify cryptographic signatures, and approve/reject. |
 | `app/api/` (if present) | Serverless API routes (rarely used, most logic in `lib/`) | — | Not critical now but may host custom endpoints. |
 
 ### Important Files Inside `app/`
 
-- **`app/agents/dashboard/page.tsx`** – The main entry for agents after login. It imports `VerifiedDashboard` which shows agency, property, and chat tabs.
+- **`app/agentportal/agents/[slug]/page.tsx`** – The main entry for agents after login. It imports `AgentWorkbench` which acts as the 3-column layout controller.
 - **`app/user/dashboard/page.tsx`** – User home after auth; contains navigation tabs (Marketplace, My Listings, Chats, Profile). **_NOTE_**: We added a `UserChatsSection` import; ensure the file exists.
 - **`app/components/ChatWidget.tsx`** – Reusable slide‑over chat UI that attaches Realtime Database listeners *only when open*.
-- **`app/agents/components/AgentChatsSection.tsx`** – Lists all conversations for an agent and opens `ChatWidget`.
+- **`app/agentportal/components/AgentChatsSection.tsx`** – Lists all conversations for an agent and opens `ChatWidget`.
 
 > **⚠️ WARNING**: The UI components are tightly coupled with the data‑layer functions in `lib/`. Renaming or moving them without updating imports will cause runtime errors.
 
@@ -80,12 +82,18 @@ The `lib/` folder is the **brain** of the application. All data manipulation, sa
   * `profile.ts` – Fetch and update user profile, identity‑consent fields.
   * `properties.ts` – CRUD for user‑draft properties, plus ownership handling.
 - **`lib/agents/*.ts`** – Agent‑specific functionality:
+  * `*Service.ts` – Dedicated CRM data services (`propertyService`, `leadService`, `taskService`, `activityService`, `analyticsService`, `dashboardService`). This strict separation extracts Firebase/Data logic from the UI components.
   * `chat.ts` – Mirrors user chat helpers but adds `property_listing` context handling.
   * `onboarding/` – Logic and Server Actions for completing agent onboarding.
-  * `agency.ts` – Agency creation, joining, and ownership transfer logic.
+  * `joinAgency.ts` / `agency.ts` – Agency creation, joining, and ownership transfer logic.
   * `properties.ts` – Functions for agents to claim, list, and modify properties.
   * `agentAuthServer.ts` – Server Actions (`sendOtpAction`, `verifyOtpAction`, `registerAgentDocAction`) marked with `'use server'` for secure transactions.
   * `authotpgen.ts` – Core OTP generation, Firestore temporary storage, and Nodemailer email delivery flow.
+- **`lib/id_verify/*`** – Cryptographic Identity Verification (KYC) Sub-system:
+  * `crypto.ts` / `keys.ts` – Handles RSA key generation, payload canonicalization, and SHA-256 signing to prevent tampering.
+  * `metadata.ts` – Collects client telemetry (IP, fingerprint, device info) for fraud prevention.
+  * `service.ts` – Server Actions (`submitAgentKYC`, `processDecision`, `fetchPendingRequests`, `verifyAgentIntegrity`) for submitting and validating KYC requests using Firestore transactions.
+  * `index.ts` – Bundles the service exports for clean imports.
 - **`lib/properties/*`** – Shared utilities for property status updates, image handling, and validation.
 - **`lib/agency.ts`** – Core agency management (create, join, leave, transfer ownership).
 
@@ -127,10 +135,10 @@ The `lib/` folder is the **brain** of the application. All data manipulation, sa
 |-----------|------|------|-----------------------|
 | `ChatWidget` | `app/components/ChatWidget.tsx` | Real‑time chat UI, attaches/detaches RTDB listeners | `lib/firebase`, `lib/chat/types` |
 | `UserPropertiesSection` | `app/user/dashboard/UserPropertiesSection.tsx` | Marketplace list, contact‑agent button, draft creation | `lib/users/*` |
-| `AgentPropertiesSection` | `app/agents/components/AgentPropertiesSection.tsx` | Agent’s property management, draft review modal, contact‑user chat | `lib/agents/*` |
-| `VerifiedDashboard` | `app/agents/components/VerifiedDashboard.tsx` | Tab navigation for agents (Agency, Properties, Chats, Profile) | `AgentAgencySection`, `AgentPropertiesSection`, `AgentChatsSection` |
+| `AgentPropertiesSection` | `app/agentportal/components/AgentPropertiesSection.tsx` | Agent’s property management, draft review modal, contact‑user chat | `lib/agents/*` |
+| `AgentWorkbench` | `app/agentportal/components/AgentWorkbench.tsx` | Core 3-column layout controller for the Agent CRM | `AgentAgencySection`, `AgentPropertiesSection`, `AgentChatsSection` |
 | `UserChatsSection` | `app/user/dashboard/UserChatsSection.tsx` | List of user conversations and entry point to ChatWidget | `lib/users/chat.ts` |
-| `AgentChatsSection` | `app/agents/components/AgentChatsSection.tsx` | List of agent conversations and entry point to ChatWidget | `lib/agents/chat.ts` |
+| `AgentChatsSection` | `app/agentportal/components/AgentChatsSection.tsx` | List of agent conversations and entry point to ChatWidget | `lib/agents/chat.ts` |
 
 ---
 
@@ -148,9 +156,9 @@ The `lib/` folder is the **brain** of the application. All data manipulation, sa
 
 ## 7. Agent & Agency Sub‑systems
 
-- **`app/agents/components/VerifiedDashboard.tsx`** – Central hub for verified agents.
-- **`lib/agents/agency.ts`** – Handles creation, joining, leaving, and ownership transfer of agencies. Agency data lives in Firestore under `agencies/`.
-- **`lib/agents/properties.ts`** – Functions agents use to claim a draft, list it, or change status.
+- **`app/agentportal/components/AgentWorkbench.tsx`** – Central hub for verified agents.
+- **`lib/agents/joinAgency.ts` / `lib/agency.ts`** – Handles creation, joining, leaving, and ownership transfer of agencies. Agency data lives in Firestore under `agencies/`.
+- **`lib/agents/propertyService.ts`** – Functions agents use to claim a draft, list it, or change status.
 - **`AgentChatsSection`** – Shows direct inquiries (property‑specific or generic) for agents.
 
 ### Ownership Mapping
@@ -190,10 +198,12 @@ Updating any of these IDs instantly changes who can edit the property, which UI 
 - **`lib/users/profile.ts`** – Fetch/update profile, enforce consent (`identityConsentAccepted`).
 - **`lib/users/auth.ts`** (if present) – Helper wrappers around Firebase Auth for sign‑in, sign‑out, and token refresh.
 
-### Identity Verification Flow
-1. User supplies phone, government ID type, ID number, ID image URL, and checks the consent box.
-2. Front‑end validates fields before allowing a property draft to be saved.
-3. The data is stored under `users/{uid}` in Firestore; no third‑party verification occurs – it is a **self‑declaration** used for trust.
+### Identity Verification & KYC Flow
+1. **Initiation**: After initial onboarding, agents can choose to verify their identity (`wants_id_verify_now` via localStorage flag).
+2. **Data Collection**: User supplies government ID, selfies, business licenses (for agencies), and client telemetry (fingerprint, IP, device model).
+3. **Cryptographic Signing**: The payload is canonicalized and hashed (SHA-256). An RSA private key signs this hash securely on the server (`lib/id_verify/service.ts`), storing the `digitalSignature`.
+4. **Admin Review**: Admins use `/admin/id_verify` to review the documents and run an `Integrity Check` which verifies the digital signature against the public key to ensure data hasn't been tampered with.
+5. **Approval**: Upon approval, the agent/agency document is updated with `id_verify: 'verified'` unlocking CRM capabilities like adding properties or agents.
 
 ---
 

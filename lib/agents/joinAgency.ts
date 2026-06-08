@@ -12,7 +12,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { AgentData } from "../agents";
+import { getAgentData } from "../agents";
 import {
   Agency,
   AgencyJoinRequest,
@@ -23,6 +23,7 @@ import {
   rejectJoinRequest,
   removeAgentFromAgency,
 } from "../agency";
+import { AgentData } from "@/utils/user";
 
 const agenciesCol = collection(db, "agencies");
 

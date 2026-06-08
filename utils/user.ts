@@ -106,6 +106,21 @@ export interface Agent {
         postalCode: string;
         country: string;
     };
+    MailingAddress?: {
+        addressLine1: string;
+        addressLine2?: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+    };
+    idVerifyDocRef?: {
+        doc_path: string;
+        submittedAt: Timestamp;
+        status: string;
+        last_signature: string;
+    };
+    location_string?: string;
 }
 
 export interface AgentRegisterPayload extends Omit<Agent, 'membership'> {
@@ -135,7 +150,7 @@ export type VerificationStatus = "none" | "pending" | "approved" | "rejected";
 export interface AgentData {
   uid: string;
   email: string;
-  role: "agent";
+  role: "agent" | "agency";
   isVerified?: boolean;
   verificationRequested?: boolean;
   verificationStatus?: VerificationStatus;

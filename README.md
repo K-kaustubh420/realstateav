@@ -25,6 +25,12 @@ The architecture is built on **Next.js** with a **Firebase** backend. We utilize
 ### Next.js Server Actions Design Pattern
 We utilize Next.js Server Actions (`'use server'`) for handling security-sensitive and server-only modules (such as Firestore admin-like writes and Nodemailer email processing). All REST API routes (previously in `/app/api`) have been eliminated. This reduces cold starts, simplifies logic deployment, and protects endpoints from external exposure.
 
+### Luxury Agent CRM Dashboard
+The Agent Portal (`/app/agentportal`) operates as a professional, high-performance Luxury CRM. It is built using a modern 3-column layout (Left Sidebar Navigation, Primary Central Workspace, Right Sidebar Activity Feed) powered by `AgentWorkbench`. The UI leverages a premium dark-mode aesthetic with glassmorphism and real-time state hydration, distinguishing the agent's professional tooling from the standard user interface.
+
+### Modular Service Layer Separation
+To maintain thin UI components inside the Agent CRM, we strictly separate data fetching and mutation into dedicated backend service files located in `lib/agents/` (e.g., `propertyService.ts`, `leadService.ts`, `taskService.ts`, `activityService.ts`, `dashboardService.ts`). This ensures that complex mapping, caching, and Firebase integrations are fully abstracted away from the React view layer.
+
 ### Global Authentication Context
 We utilize a global `AuthProvider` wrapped at the root layout level (`app/layout.tsx`). The context manages the Firebase Auth listener, fetches the active user's role-based database profile (Agent or User), and handles route guards (e.g., blocking non-agents from entering `/agentportal/dashboard`). 
 * **Self-Handling Page Loading:** To optimize rendering speed, avoid hydration flashes, and allow pages to customize their own loading/skeleton UIs, the global `AuthContext` does not contain any layout-blocking loaders or spinners. It renders children immediately while exposing `loading` state through context variables.
@@ -55,9 +61,11 @@ Conversations use a strictly typed `conversationContext` (e.g., `property_listin
 
 ## 3. Core System Flows
 
-### User Identity Verification Flow
-Before users can create property drafts or initiate conversations, they must complete lightweight identity verification (Phone, Government ID, Consent). 
-* **Why?** This prevents spam, protects agent time, and acts as a trust-and-safety layer for property ownership claims. Users self-declare consent, locking in their identity before interacting with the ecosystem.
+### Cryptographic Identity Verification & KYC Flow
+Before users or agents can publish property drafts or fully utilize the CRM dashboard, they must complete an identity verification process.
+* **Why?** This prevents spam, protects agent time, and acts as a trust-and-safety layer.
+* **Cryptographic Signatures:** The application collects government IDs, selfies, address proofs, and client telemetry (IP, fingerprint, device type). Upon submission, a Next.js Server Action (`submitAgentKYC`) canonicalizes the payload, generates a SHA-256 hash, and signs it using an RSA Private Key. 
+* **Admin Verification:** Admins review pending KYC requests via an isolated Admin Console (`/admin/id_verify`). To prevent DB tampering, the dashboard runs a Cryptographic Integrity Check verifying the digital signature against the public key stored securely in the DB. If tampered, the UI loudly warns the admin.
 
 ### Agent Registration & OTP Verification Flow (Server Actions)
 To protect agent onboarding and secure contact detail confirmation, we leverage a Next.js Server Actions workflow:
@@ -65,12 +73,14 @@ To protect agent onboarding and secure contact detail confirmation, we leverage 
 2. **Secure OTP Generation:** The server generates a 4-digit OTP, stores it with a 45-second expiry in a temporary `otps` Firestore collection, and sends it via Nodemailer. In local development, the code prints directly to the console output to bypass SMTP dependency.
 3. **Account Provisioning:** The agent enters the OTP, which is verified by `verifyOtpAction`. Upon success, the client creates their account in Firebase Authentication and triggers `registerAgentDocAction` to write their fully structured profile matching the `Agent` schema into the Firestore `agents` collection, keyed by their Firebase Auth `uid`.
 
-### Mandatory Agent Onboarding Flow
+### Mandatory Agent Onboarding & Verification Enforcement
 After successful registration, an agent is not immediately granted access to the dashboard. The `AuthContext` enforces a strict redirection to `/agentportal/onboarding` if the `onboardingCompleted` flag is false.
 1. **Step 1 (Personal):** Users provide their bio and name details.
 2. **Step 2 (Location):** Agents supply their operational address. We utilize OpenStreetMap reverse-geocoding via the `navigator.geolocation` API to auto-fill address details.
 3. **Step 3 (ID Verification):** Agents are encouraged to verify their government IDs (which links to the dedicated `id_verification` isolated service).
-4. **Step 4 (Review & Submit):** A Server Action (`completeAgentOnboardingAction`) updates the Firestore document, finally setting `onboardingCompleted: true` to unlock the dashboard.
+4. **Step 4 (Review & Submit):** A Server Action (`completeAgentOnboardingAction`) updates the Firestore document, setting `onboardingCompleted: true`. Based on a local storage flag (`wants_id_verify_now`), the agent is either directed into the CRM dashboard or immediately redirected to `/id_verification/[slug]` to complete their full legal KYC.
+
+**Strict Dashboard Action Blocking:** Even after onboarding, the CRM Dashboard aggressively checks `id_verify` and `membership.status` flags. If an agent is not fully verified or their membership is inactive, a global alert banner persists, and any attempts to add/import properties or accept high-tier leads are hard-blocked via UI safeguards and service layer validation.
 
 ### Property Lifecycle & Ownership Transfer
 1. **User Drafts Property:** A user submits a property they want to sell/rent. It enters the centralized database with `status = "draft"`, `userId = {user.uid}`, and `agentId = null`. It does NOT appear on the public marketplace.

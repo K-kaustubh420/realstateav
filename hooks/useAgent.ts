@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import  { Agent } from "../utils/user"
 
 export function useAgent() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [isAgent, setIsAgent] = useState(false);
-    const [agentData, setAgentData] = useState<any>(null); // Store basic agent data to avoid re-fetching in page
+    const [agentData, setAgentData] = useState<Agent | null>(null); // Store basic agent data to avoid re-fetching in page
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -30,7 +31,7 @@ export function useAgent() {
 
                 if (docSnap.exists() && docSnap.data().role === "agent") {
                     setIsAgent(true);
-                    setAgentData(docSnap.data());
+                    setAgentData(docSnap.data() as Agent);
                 } else {
                     setIsAgent(false);
                     setAgentData(null);

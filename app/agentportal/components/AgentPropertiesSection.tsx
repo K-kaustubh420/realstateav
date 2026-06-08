@@ -6,19 +6,21 @@ import { db } from "@/lib/firebase";
 import { Plus, Edit3, CheckCircle, Ban, RefreshCw, Trash2, Home, User, Building2, MapPin, DollarSign, Layers } from "lucide-react";
 import { fetchUserProfile, UserProfile } from '@/lib/users/profile';
 import { Property, PropertyScene, PropertyStatus } from "@/lib/properties/property.types";
-import { AgentData, getAgentData } from "@/lib/agents";
-import { getAgentActiveAgency } from "@/lib/agents/joinAgency";
+import { getAgentData } from "@/lib/agents";
+import { Agent } from "@/utils/user";
 import { updatePropertyStatus } from "@/lib/properties/propertyStatus";
 import { deleteProperty } from "@/lib/properties/deleteProperty";
+import { fetchAgentPropertiesData } from "@/lib/agents/propertyService";
 import PropertyFormModal from "./PropertyFormModal";
 import ChatWidget from "@/app/components/ChatWidget";
 
 interface AgentPropertiesSectionProps {
+  uid: string;
   email: string;
 }
 
-export default function AgentPropertiesSection({ email }: AgentPropertiesSectionProps) {
-  const [agentData, setAgentData] = useState<AgentData | null>(null);
+export default function AgentPropertiesSection({ uid, email }: AgentPropertiesSectionProps) {
+  const [agentData, setAgentData] = useState<Agent | null>(null);
   const [activeAgency, setActiveAgency] = useState<{ agencyId: string; agencyName: string } | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,44 +54,10 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
     setLoading(true);
     setError(null);
     try {
-      const agent = await getAgentData(email);
-      if (!agent) {
-        setError("Unable to resolve agent profile.");
-        setLoading(false);
-        return;
-      }
-      setAgentData(agent);
-
-      // Resolve active agency if any
-      const agencyRecord = await getAgentActiveAgency(agent);
-      if (agencyRecord) {
-        setActiveAgency({
-          agencyId: agencyRecord.agencyId,
-          agencyName: agencyRecord.agencyName,
-        });
-      } else {
-        setActiveAgency(null);
-      }
-
-      // Query agent's own properties
-      const propertiesCol = collection(db, "properties");
-      const qAgent = query(propertiesCol, where("agentId", "==", agent.uid));
-      const snapAgent = await getDocs(qAgent);
-      const agentProps = snapAgent.docs.map((d) => d.data() as Property);
-
-      // Query all draft properties to search for user drafts (unclaimed)
-      const qDrafts = query(propertiesCol, where("status", "==", "draft"));
-      const snapDrafts = await getDocs(qDrafts);
-      const userDrafts = snapDrafts.docs
-        .map((d) => d.data() as Property)
-        .filter((p) => p.userId && !p.agentId);
-
-      // Combine and deduplicate
-      const allPropsMap = new Map<string, Property>();
-      agentProps.forEach((p) => allPropsMap.set(p.id, p));
-      userDrafts.forEach((p) => allPropsMap.set(p.id, p));
-
-      setProperties(Array.from(allPropsMap.values()));
+      const { properties, agentData, activeAgency } = await fetchAgentPropertiesData(uid, email);
+      setAgentData(agentData);
+      setActiveAgency(activeAgency);
+      setProperties(properties);
     } catch (err: any) {
       console.error(err);
       setError("Failed to load property listings.");
@@ -100,7 +68,7 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
 
   useEffect(() => {
     loadPropertiesData();
-  }, [email]);
+  }, [uid, email]);
 
   const handleStatusChange = async (
     propertyId: string,
@@ -234,7 +202,7 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-black/55 p-12 text-center text-slate-400">
+      <div className="rounded-3xl border border-white/5 bg-[#0f0f0f] p-12 text-center text-zinc-400">
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 animate-spin text-[#D4AF37]" />
           <p className="text-lg font-medium text-white">Loading properties workspace...</p>
@@ -258,10 +226,10 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
       )}
 
       {/* Main Header / Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-zinc-950/40 p-6 rounded-3xl border border-white/5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-[#0f0f0f] p-6 rounded-3xl border border-white/5">
         <div>
-          <h3 className="text-2xl font-semibold text-white">Manage Listings</h3>
-          <p className="text-sm text-slate-400">Manage your real estate listings and claim incoming user drafts.</p>
+          <h3 className="text-2xl font-serif tracking-wide text-white">Manage Listings</h3>
+          <p className="text-sm text-zinc-400 font-light mt-1">Manage your real estate listings and claim incoming user drafts.</p>
         </div>
         <button
           onClick={() => {
@@ -276,14 +244,14 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/15 bg-zinc-950/20 rounded-2xl p-1 gap-1">
+      <div className="flex border-b border-white/5 bg-[#0f0f0f] rounded-2xl p-1 gap-1">
         {(["active", "draft", "sold", "rented"] as PropertyStatus[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveSubTab(tab)}
             className={`flex-1 rounded-xl py-3 text-sm font-semibold capitalize tracking-wide transition duration-300 ${activeSubTab === tab
               ? "bg-[#D4AF37]/15 text-white shadow-[inset_0_0_0_1px_rgba(212,175,55,0.2)] border-b border-[#D4AF37]/30"
-              : "text-slate-400 hover:bg-white/5 hover:text-white"
+              : "text-zinc-500 hover:bg-white/5 hover:text-white"
               }`}
           >
             {tab} Listings
@@ -293,10 +261,10 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
 
       {/* Grid List */}
       {filteredProperties.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-black/40 py-16 text-center text-slate-400">
-          <Home className="mx-auto h-12 w-12 text-slate-600 mb-4" />
+        <div className="rounded-3xl border border-white/5 bg-[#0f0f0f] py-16 text-center text-zinc-400">
+          <Home className="mx-auto h-12 w-12 text-zinc-600 mb-4" />
           <p className="text-lg font-medium text-white">No listings found</p>
-          <p className="mt-2 text-sm text-slate-500">There are no properties in the "{activeSubTab}" state currently.</p>
+          <p className="mt-2 text-sm text-zinc-500">There are no properties in the "{activeSubTab}" state currently.</p>
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -309,7 +277,7 @@ export default function AgentPropertiesSection({ email }: AgentPropertiesSection
             return (
               <div
                 key={property.id}
-                className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 p-5 shadow-lg transition duration-300 hover:border-[#D4AF37]/30 hover:shadow-[0_24px_50px_-25px_rgba(0,0,0,0.8)]"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/5 bg-[#0f0f0f] p-5 shadow-lg transition duration-300 hover:border-[#D4AF37]/30 hover:shadow-[0_24px_50px_-25px_rgba(212,175,55,0.1)]"
               >
                 {/* Image */}
                 <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-white/5 bg-slate-900">

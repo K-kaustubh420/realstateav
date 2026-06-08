@@ -166,30 +166,31 @@ export const useAgentRegister = () => {
                  role: "agent",
                  agency: "Null",
                  preferredLocations: [],
-                 
+
                  // UPDATED: Now an object matching your new interface
                  location: {
                      longitute: "",
                      latitute: ""
                  },
-                 
+
                  id_verify: "unverified",
                  properties: [],
                  ratings: [],
                  about: "",
-                 
+
                  // UPDATED: Now a string (empty) instead of null
-                 photoURL: "", 
-                 
+                 photoURL: "",
+
                  canaddproperty: false,
                  canaddagents: false,
                  onboardingCompleted: false,
                  membership: {
                      transaction_id: "none",
                      status: "pending",
-                     start_date: new Date().toISOString(), 
+                     start_date: new Date().toISOString(),
                      end_date: new Date().toISOString(),
-                 }
+                 },
+                 fullName: ""
              };
 
              const apiRes = await registerAgentDocAction(newAgentPayload);

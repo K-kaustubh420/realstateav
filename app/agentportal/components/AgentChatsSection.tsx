@@ -2,17 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchAgentConversations } from '@/lib/agents/chat';
-import { getAgentData, AgentData } from '@/lib/agents';
+import {  getAgentData } from '@/lib/agents';
 import { ConversationDoc } from '@/lib/chat/types';
 import ChatWidget from '@/app/components/ChatWidget';
 import { MessageCircle, RefreshCw } from 'lucide-react';
+import { Agent } from '@/utils/user';
 
 interface AgentChatsSectionProps {
   email: string;
 }
 
 export default function AgentChatsSection({ email }: AgentChatsSectionProps) {
-  const [agentData, setAgentData] = useState<AgentData | null>(null);
+  const [agentData, setAgentData] = useState<Agent | null>(null);
   const [conversations, setConversations] = useState<ConversationDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

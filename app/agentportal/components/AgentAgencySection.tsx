@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Building2, CheckCircle2, Send, ShieldCheck } from "lucide-react";
-import { AgentData, getAgentData } from "@/lib/agents";
+import { getAgentData } from "@/lib/agents";
 import {
   getAgentPendingRequest,
   getAgentPropertiesUnderAgency,
@@ -14,13 +14,15 @@ import {
   PendingAgencyRequest,
 } from "@/lib/agents/joinAgency";
 import { Agency, getAgencyById, AgencyProperty } from "@/lib/agency";
+import { Agent } from "@/utils/user";
 
 type AgentAgencySectionProps = {
+  uid: string;
   email: string;
 };
 
-export default function AgentAgencySection({ email }: AgentAgencySectionProps) {
-  const [agentData, setAgentData] = useState<AgentData | null>(null);
+export default function AgentAgencySection({ uid, email }: AgentAgencySectionProps) {
+  const [agentData, setAgentData] = useState<Agent | null>(null);
   const [agency, setAgency] = useState<Agency | null>(null);
   const [properties, setProperties] = useState<AgencyProperty[]>([]);
   const [status, setStatus] = useState<"none" | "pending" | "accepted">("none");
@@ -40,7 +42,7 @@ export default function AgentAgencySection({ email }: AgentAgencySectionProps) {
         setError("Missing agent email.");
         return;
       }
-      const agent = await getAgentData(email);
+      const agent = await getAgentData(uid, email);
       if (!agent) {
         console.error("getAgentData returned null for", email);
         setError("Unable to find your agent profile.");
@@ -94,17 +96,17 @@ export default function AgentAgencySection({ email }: AgentAgencySectionProps) {
 
   useEffect(() => {
     refreshAgentStatus();
-  }, [email]);
+  }, [uid, email]);
 
   // subscribe to realtime changes on the agent document so approvals show up instantly
   useEffect(() => {
-    if (!email) return;
-    const ref = doc(db, "agents", email);
+    if (!uid) return;
+    const ref = doc(db, "agents", uid);
     const unsub = onSnapshot(
       ref,
       async (snap) => {
         if (!snap.exists()) return;
-        const agent = snap.data() as AgentData;
+        const agent = snap.data() as Agent;
         setAgentData(agent);
         const pending = getAgentPendingRequest(agent);
         setPendingRequest(pending || null);
@@ -140,7 +142,7 @@ export default function AgentAgencySection({ email }: AgentAgencySectionProps) {
     );
 
     return () => unsub();
-  }, [email]);
+  }, [uid]);
 
   const handleSubmitJoin = async () => {
     if (!joinCode.trim()) {
