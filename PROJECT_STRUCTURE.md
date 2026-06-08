@@ -91,7 +91,8 @@ The `lib/` folder is the **brain** of the application. All data manipulation, sa
   * `authotpgen.ts` – Core OTP generation, Firestore temporary storage, and Nodemailer email delivery flow.
 - **`lib/id_verify/*`** – Cryptographic Identity Verification (KYC) Sub-system:
   * `crypto.ts` / `keys.ts` – Handles RSA key generation, payload canonicalization, and SHA-256 signing to prevent tampering.
-  * `metadata.ts` – Collects client telemetry (IP, fingerprint, device info) for fraud prevention.
+  * `metadata.ts` – Collects advanced client telemetry (IP, fingerprint, device info, browser, geolocation) for fraud prevention.
+  * `image_upload/r2.ts` – Handles Cloudflare R2 secure object storage integration. Uses `generateUploadUrl` and `generateViewUrl` to exchange private object keys for temporary presigned URLs.
   * `service.ts` – Server Actions (`submitAgentKYC`, `processDecision`, `fetchPendingRequests`, `verifyAgentIntegrity`) for submitting and validating KYC requests using Firestore transactions.
   * `index.ts` – Bundles the service exports for clean imports.
 - **`lib/properties/*`** – Shared utilities for property status updates, image handling, and validation.
@@ -200,10 +201,11 @@ Updating any of these IDs instantly changes who can edit the property, which UI 
 
 ### Identity Verification & KYC Flow
 1. **Initiation**: After initial onboarding, agents can choose to verify their identity (`wants_id_verify_now` via localStorage flag).
-2. **Data Collection**: User supplies government ID, selfies, business licenses (for agencies), and client telemetry (fingerprint, IP, device model).
-3. **Cryptographic Signing**: The payload is canonicalized and hashed (SHA-256). An RSA private key signs this hash securely on the server (`lib/id_verify/service.ts`), storing the `digitalSignature`.
-4. **Admin Review**: Admins use `/admin/id_verify` to review the documents and run an `Integrity Check` which verifies the digital signature against the public key to ensure data hasn't been tampered with.
-5. **Approval**: Upon approval, the agent/agency document is updated with `id_verify: 'verified'` unlocking CRM capabilities like adding properties or agents.
+2. **Data Collection**: User supplies Personal Info (Permanent vs Mailing Address), government ID, selfies, business licenses (for agencies), and client telemetry (fingerprint, IP, device model, geolocation).
+3. **Secure Document Storage**: Images are uploaded directly to **Cloudflare R2** using secure presigned URLs (`generateUploadUrl`). The database only stores private object keys, never public image URLs.
+4. **Cryptographic Signing**: The payload is canonicalized and hashed (SHA-256). An RSA private key signs this hash securely on the server (`lib/id_verify/service.ts`), storing the `digitalSignature`. This includes `metadata_hash` and `personal_hash` to ensure absolute immutability.
+5. **Admin Review**: Admins use `/admin/id_verify` to dynamically fetch presigned view URLs (`generateViewUrl`) to review the documents and run an `Integrity Check` which mathematically guarantees no data manipulation occurred post-submission.
+6. **Approval**: Upon approval, the agent/agency document is updated with `id_verify: 'verified'` unlocking CRM capabilities like adding properties or agents.
 
 ---
 

@@ -64,8 +64,10 @@ Conversations use a strictly typed `conversationContext` (e.g., `property_listin
 ### Cryptographic Identity Verification & KYC Flow
 Before users or agents can publish property drafts or fully utilize the CRM dashboard, they must complete an identity verification process.
 * **Why?** This prevents spam, protects agent time, and acts as a trust-and-safety layer.
-* **Cryptographic Signatures:** The application collects government IDs, selfies, address proofs, and client telemetry (IP, fingerprint, device type). Upon submission, a Next.js Server Action (`submitAgentKYC`) canonicalizes the payload, generates a SHA-256 hash, and signs it using an RSA Private Key. 
-* **Admin Verification:** Admins review pending KYC requests via an isolated Admin Console (`/admin/id_verify`). To prevent DB tampering, the dashboard runs a Cryptographic Integrity Check verifying the digital signature against the public key stored securely in the DB. If tampered, the UI loudly warns the admin.
+* **4-Step KYC Onboarding:** Users seamlessly complete Personal Details (including Permanent & Mailing address workflows), Document Details, and Selfie validations.
+* **Secure R2 Object Storage:** All uploaded proof documents (ID Cards, Licenses, Selfies) are stored securely as isolated objects in a **Cloudflare R2** bucket, never as public HTTP URLs. The system dynamically generates temporary, presigned URLs (`generateViewUrl`) on-the-fly only when an authorized admin inspects them.
+* **Cryptographic Signatures:** The application collects the entire form payload and advanced client telemetry (IP, fingerprint, device type, map geolocation). Upon submission, a Next.js Server Action (`submitAgentKYC`) canonicalizes the payload (including `metadata_hash` and `personal_hash`), generates a SHA-256 hash, and signs it using an RSA Private Key. 
+* **Admin Verification:** Admins review pending KYC requests via an isolated Admin Console (`/admin/id_verify`). To prevent DB tampering, the dashboard runs a Cryptographic Integrity Check verifying the digital signature against the public key stored securely in the DB. If a single character of the address or a single pixel of an image is altered post-submission, the UI loudly warns the admin.
 
 ### Agent Registration & OTP Verification Flow (Server Actions)
 To protect agent onboarding and secure contact detail confirmation, we leverage a Next.js Server Actions workflow:

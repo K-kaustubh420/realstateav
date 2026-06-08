@@ -47,5 +47,5 @@ export function useAgent() {
         return () => unsubscribe();
     }, []);
 
-    return { user, loading, isAgent, agentData };
+    return { user, loading, isAgent, agentData, setAgentData };
 }
