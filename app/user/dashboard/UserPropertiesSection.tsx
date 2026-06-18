@@ -11,6 +11,7 @@ import {
 import UserDraftFormModal from './UserDraftFormModal';
 import ChatWidget from '@/app/components/ChatWidget';
 import Image from 'next/image';
+import { ClipboardList, Heart, Building } from 'lucide-react';
 
 interface UserPropertiesSectionProps {
   userEmail: string;
@@ -195,30 +196,31 @@ export default function UserPropertiesSection({
 
       {/* 2. MY PROPERTIES - LISTINGS AND INTERESTED */}
       {activeTab === 'my-properties' && (
-        <div className="space-y-12">
+        <div className="space-y-12 animate-in fade-in duration-500">
           {/* A. Listed by User */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                📋 Properties Listed by You
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-xl space-y-6">
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                <ClipboardList className="text-[#FBBF24]" size={24} />
+                Properties Listed by You
               </h3>
               <button
                 onClick={() => {
                   setEditProperty(null);
                   setIsDraftModalOpen(true);
                 }}
-                className="btn btn-warning btn-xs rounded-full font-bold px-4"
+                className="btn bg-[#FBBF24] hover:bg-[#d9a520] text-black border-none font-bold rounded-full px-6 btn-sm shadow-lg transition-transform hover:scale-105"
               >
                 + Add Listing
               </button>
             </div>
 
             {loading ? (
-              <div className="flex justify-center items-center py-6">
-                <span className="loading loading-spinner loading-md text-warning"></span>
+              <div className="flex justify-center items-center py-12">
+                <span className="loading loading-spinner loading-lg text-[#FBBF24]"></span>
               </div>
             ) : listedProperties.length === 0 ? (
-              <div className="text-zinc-500 py-6 text-sm">
+              <div className="text-zinc-500 py-12 text-center text-sm bg-zinc-800/20 rounded-2xl border border-dashed border-zinc-700">
                 You haven&apos;t listed any properties yet. Create a draft to get started!
               </div>
             ) : (
@@ -230,78 +232,85 @@ export default function UserPropertiesSection({
                   return (
                     <div
                       key={property.id}
-                      className="card bg-zinc-900 border border-zinc-850 p-4 rounded-xl flex flex-col sm:flex-row gap-4"
+                      className="group bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col xl:flex-row gap-5 shadow-lg hover:border-zinc-700 hover:shadow-2xl transition-all"
                     >
-                      <div className="relative w-full sm:w-32 h-24 bg-zinc-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-zinc-600">
+                      <div className="relative w-full xl:w-40 h-32 bg-zinc-800 rounded-xl overflow-hidden shrink-0 flex items-center justify-center text-zinc-600">
                         {firstImage ? (
                           <Image
                             src={firstImage}
                             alt={property.title || 'Listed property'}
                             fill
-                            sizes="128px"
-                            className="object-cover"
+                            sizes="160px"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                             unoptimized
                           />
                         ) : (
-                          <span>🏢</span>
+                          <Building size={32} className="opacity-30" />
                         )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
 
-                      <div className="flex-1 flex flex-col justify-between space-y-2">
+                      <div className="flex-1 flex flex-col justify-between space-y-3">
                         <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="font-bold text-white text-sm line-clamp-1">{property.title}</h4>
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                            <h4 className="font-bold text-white text-base line-clamp-1 flex-1 pr-2">{property.title}</h4>
                             <span
-                              className={`badge badge-xs font-bold uppercase ${
+                              className={`px-2 py-1 rounded-md text-[10px] font-extrabold tracking-wider uppercase ${
                                 property.status === 'active'
-                                  ? 'badge-success text-black'
+                                  ? 'bg-emerald-400/20 text-emerald-400'
                                   : property.status === 'draft'
-                                  ? 'badge-warning text-black'
-                                  : 'badge-neutral text-white'
+                                  ? 'bg-[#FBBF24]/20 text-[#FBBF24]'
+                                  : 'bg-zinc-800 text-zinc-400'
                               }`}
                             >
                               {property.status}
                             </span>
                           </div>
-                          <p className="text-[11px] text-zinc-400 uppercase tracking-wider">
+                          <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">
                             {property.propertyType} • {property.location}, {property.city}
                           </p>
-                          <p className="text-sm font-bold text-warning">${property.expectedPrice.toLocaleString()}</p>
+                          <p className="text-lg font-extrabold text-[#FBBF24]">${property.expectedPrice.toLocaleString()}</p>
                         </div>
 
                         {property.agentName ? (
-                          <div className="p-2 bg-zinc-950 rounded-lg text-xs space-y-1">
-                            <span className="text-[10px] text-zinc-500 font-bold uppercase">Assigned Agent</span>
-                            <p className="text-zinc-300 font-semibold">{property.agentName}</p>
+                          <div className="p-3 bg-black/40 border border-zinc-800 rounded-xl text-xs space-y-1">
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Assigned Agent</span>
+                            <p className="text-white font-semibold flex items-center gap-2">
+                              {property.agentName}
+                            </p>
                             {property.agentId && (
-                              <p className="text-[10px] text-zinc-500 italic">Agent will contact you shortly</p>
+                              <p className="text-[10px] text-[#FBBF24]/70 italic mt-1">Agent will contact you shortly</p>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[11px] text-zinc-500 italic">Draft awaiting agent claim</span>
+                          <div className="p-3 bg-zinc-800/30 border border-zinc-800 border-dashed rounded-xl">
+                            <span className="text-xs text-zinc-500 italic flex items-center gap-2">
+                              Draft awaiting agent claim
+                            </span>
+                          </div>
                         )}
 
                         {/* Untouched Draft edit/delete controls */}
                         {isUntouchedDraft ? (
-                          <div className="flex gap-2 justify-end pt-1">
+                          <div className="flex gap-2 justify-end pt-2">
                             <button
                               onClick={() => handleEditDraftClick(property)}
-                              className="btn btn-outline btn-warning btn-xs rounded-full font-bold px-3"
+                              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-lg transition-colors"
                               disabled={actionLoading === property.id}
                             >
-                              Edit Draft
+                              Edit
                             </button>
                             <button
                               onClick={() => handleDeleteDraftClick(property.id)}
-                              className="btn btn-outline btn-error btn-xs rounded-full font-bold px-3"
+                              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-bold rounded-lg transition-colors"
                               disabled={actionLoading === property.id}
                             >
                               {actionLoading === property.id ? 'Deleting...' : 'Delete'}
                             </button>
                           </div>
                         ) : (
-                          <div className="text-[10px] text-zinc-500 text-right italic font-semibold">
-                            Locked (Claimed by Agent)
+                          <div className="text-xs text-zinc-500 text-right italic font-medium pt-2">
+                            Locked (Claimed)
                           </div>
                         )}
                       </div>
@@ -313,17 +322,18 @@ export default function UserPropertiesSection({
           </div>
 
           {/* B. Properties Marked Interested In */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-white border-b border-zinc-800 pb-3 flex items-center gap-2">
-              ❤️ Properties You Are Interested In
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl shadow-xl space-y-6">
+            <h3 className="text-xl font-bold text-white border-b border-zinc-800 pb-4 flex items-center gap-3">
+              <Heart className="text-red-500" fill="currentColor" size={24} />
+              Properties You Are Interested In
             </h3>
 
             {loading ? (
-              <div className="flex justify-center items-center py-6">
-                <span className="loading loading-spinner loading-md text-warning"></span>
+              <div className="flex justify-center items-center py-12">
+                <span className="loading loading-spinner loading-lg text-[#FBBF24]"></span>
               </div>
             ) : interestedProperties.length === 0 ? (
-              <div className="text-zinc-500 py-6 text-sm">
+              <div className="text-zinc-500 py-12 text-center text-sm bg-zinc-800/20 rounded-2xl border border-dashed border-zinc-700">
                 You haven&apos;t marked any properties as interested. Browse active listings to find ones you like!
               </div>
             ) : (
@@ -334,61 +344,64 @@ export default function UserPropertiesSection({
                   return (
                     <div
                       key={property.id}
-                      className="card bg-zinc-900 border border-zinc-850 p-4 rounded-xl flex flex-col sm:flex-row gap-4"
+                      className="group bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex flex-col xl:flex-row gap-5 shadow-lg hover:border-zinc-700 hover:shadow-2xl transition-all"
                     >
-                      <div className="relative w-full sm:w-32 h-24 bg-zinc-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center text-zinc-600">
+                      <div className="relative w-full xl:w-40 h-32 bg-zinc-800 rounded-xl overflow-hidden shrink-0 flex items-center justify-center text-zinc-600">
                         {firstImage ? (
                           <Image
                             src={firstImage}
                             alt={property.title || 'Interested property'}
                             fill
-                            sizes="128px"
-                            className="object-cover"
+                            sizes="160px"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                             unoptimized
                           />
                         ) : (
-                          <span>🏢</span>
+                          <Building size={32} className="opacity-30" />
                         )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                       </div>
 
-                      <div className="flex-1 flex flex-col justify-between space-y-2">
+                      <div className="flex-1 flex flex-col justify-between space-y-3">
                         <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="font-bold text-white text-sm line-clamp-1">{property.title}</h4>
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                            <h4 className="font-bold text-white text-base line-clamp-1 flex-1 pr-2">{property.title}</h4>
                             <span
-                              className={`badge badge-xs font-bold uppercase ${
+                              className={`px-2 py-1 rounded-md text-[10px] font-extrabold tracking-wider uppercase ${
                                 property.status === 'active'
-                                  ? 'badge-success text-black'
+                                  ? 'bg-emerald-400/20 text-emerald-400'
                                   : property.status === 'sold'
-                                  ? 'badge-error text-white'
-                                  : 'badge-neutral text-white'
+                                  ? 'bg-red-500/20 text-red-500'
+                                  : 'bg-zinc-800 text-zinc-400'
                               }`}
                             >
                               {property.status}
                             </span>
                           </div>
-                          <p className="text-[11px] text-zinc-400 uppercase tracking-wider">
+                          <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">
                             {property.propertyType} • {property.location}, {property.city}
                           </p>
-                          <p className="text-sm font-bold text-warning">${property.expectedPrice.toLocaleString()}</p>
+                          <p className="text-lg font-extrabold text-[#FBBF24]">${property.expectedPrice.toLocaleString()}</p>
                         </div>
 
                         {property.agentName ? (
-                          <div className="p-2 bg-zinc-950 rounded-lg text-xs space-y-1">
-                            <span className="text-[10px] text-zinc-500 font-bold uppercase">Listing Agent</span>
-                            <p className="text-zinc-300 font-semibold">{property.agentName}</p>
+                          <div className="p-3 bg-black/40 border border-zinc-800 rounded-xl text-xs space-y-1">
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Listing Agent</span>
+                            <p className="text-white font-semibold">{property.agentName}</p>
                           </div>
                         ) : (
-                          <span className="text-[11px] text-zinc-500 italic">No active agent yet</span>
+                          <div className="p-3 bg-zinc-800/30 border border-zinc-800 border-dashed rounded-xl">
+                            <span className="text-xs text-zinc-500 italic">No active agent yet</span>
+                          </div>
                         )}
 
-                        <div className="flex justify-end pt-1">
+                        <div className="flex justify-end pt-2">
                           <button
                             onClick={() => handleToggleInterestClick(property.id, true)}
-                            className="btn btn-outline btn-error btn-xs rounded-full font-bold px-3"
+                            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2"
                             disabled={actionLoading === property.id}
                           >
-                            Remove
+                            <Heart size={14} className="text-zinc-400" /> Remove
                           </button>
                         </div>
                       </div>

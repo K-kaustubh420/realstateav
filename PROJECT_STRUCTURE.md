@@ -51,7 +51,8 @@ realstateav/
 | `app/components/` | Reusable UI widgets (e.g., `ChatWidget`) | `lib/firebase`, `lib/chat/types` | Central place for UI that appears across both user & agent portals. |
 | `app/agentportal/components/` | Agent CRM specific UI (agency list, property cards, chat section, AgentWorkbench) | `lib/agents/*` | Isolated 3-column UI for the professional agent experience. |
 | `app/agentportal/onboarding/` | Agent Onboarding flow & UI steps | `lib/agents/onboarding/*` | Forces newly registered agents to complete their profile setup before accessing the dashboard. |
-| `app/user/dashboard/` | User dashboard pages and sections (profile, property list, chats) | `lib/users/*` | Core entry point for a logged‑in user. |
+| `app/user/components/onboarding/` | User Onboarding flow & UI steps | `lib/users/onboardingActions.ts` | Multi-step setup for new users (Personal, Intent, Location, Review) ensuring full profile data. |
+| `app/user/dashboard/` | User dashboard pages and sections (home, profile, property list, chats) | `lib/users/*` | Core entry point for a logged‑in user, featuring a premium intent-based dynamic UI. |
 | `app/layout.tsx` | Global layout (navbar, theming) | — | Wraps all pages; removing breaks navigation. |
 | `app/page.tsx` (root) | Home page / landing page | — | Entry point for visitors. |
 | `app/id_verification/` | Isolated KYC/ID Verification flows | `lib/id_verify/*` | Separate UI specifically for collecting agent/agency legal documents, selfies, and metadata securely. |
@@ -61,7 +62,7 @@ realstateav/
 ### Important Files Inside `app/`
 
 - **`app/agentportal/agents/[slug]/page.tsx`** – The main entry for agents after login. It imports `AgentWorkbench` which acts as the 3-column layout controller.
-- **`app/user/dashboard/page.tsx`** – User home after auth; contains navigation tabs (Marketplace, My Listings, Chats, Profile). **_NOTE_**: We added a `UserChatsSection` import; ensure the file exists.
+- **`app/user/dashboard/page.tsx`** – User home after auth; features a fixed navigation sidebar with Framer Motion active-tab animations, handling routing to intent-specific home views, profile settings, favourites, and messages.
 - **`app/components/ChatWidget.tsx`** – Reusable slide‑over chat UI that attaches Realtime Database listeners *only when open*.
 - **`app/agentportal/components/AgentChatsSection.tsx`** – Lists all conversations for an agent and opens `ChatWidget`.
 

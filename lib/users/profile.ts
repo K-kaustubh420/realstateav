@@ -1,38 +1,18 @@
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-
-export interface UserProfile {
-  uid: string;
-  email: string;
-  role: "user";
-  createdAt: number;
-  fullName?: string;
-  phoneNumber?: string;
-  photoURL?: string;
-  permanentAddress?: string;
-  isDeleted?: boolean;
-  // New lightweight identity fields
-  governmentIdType?: string; // e.g., "Passport", "Aadhar"
-  governmentIdNumber?: string;
-  governmentIdImageUrl?: string;
-  isIdentityVerified?: boolean; // default false until verification
-  identityConsentAccepted?: boolean; // user self‑declaration consent
-}
+import { User } from "@/utils/user";
 
 /**
- * Fetches the user profile doc from 'users' collection using email as the document ID.
+ * Fetches the user profile doc from 'users' collection using uid as the document ID.
  */
-export const fetchUserProfile = async (email: string): Promise<UserProfile | null> => {
-  if (!email) return null;
-  const userRef = doc(db, "users", email);
+export const fetchUserProfile = async (uid: string): Promise<User | null> => {
+  if (!uid) return null;
+  const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
   if (!snap.exists()) {
     return null;
   }
-  const data = snap.data() as UserProfile;
-  if (data.isDeleted) {
-    return null;
-  }
+  const data = snap.data() as User;
   return data;
 };
 
@@ -40,19 +20,23 @@ export const fetchUserProfile = async (email: string): Promise<UserProfile | nul
  * Updates user profile details in Firestore.
  */
 export const updateUserProfile = async (
-  email: string,
-  updatedData: Partial<Omit<UserProfile, "uid" | "email" | "role" | "createdAt" | "isDeleted">>
+  uid: string,
+  updatedData: Partial<User>
 ): Promise<void> => {
-  if (!email) throw new Error("Email is required to update profile.");
-  const userRef = doc(db, "users", email);
+  if (!uid) throw new Error("UID is required to update profile.");
+  const userRef = doc(db, "users", uid);
   await updateDoc(userRef, updatedData);
 };
 
 /**
- * Performs a soft-delete by setting 'isDeleted' to true.
+ * Performs a soft-delete by removing PII but keeping the auth record if needed, 
+ * or just flag it (Note: 'isDeleted' is not in standard User interface right now, 
+ * so we can either add it or handle it separately. We will use a soft approach).
  */
-export const softDeleteUserProfile = async (email: string): Promise<void> => {
-  if (!email) throw new Error("Email is required to delete profile.");
-  const userRef = doc(db, "users", email);
-  await updateDoc(userRef, { isDeleted: true });
+export const softDeleteUserProfile = async (uid: string): Promise<void> => {
+  if (!uid) throw new Error("UID is required to delete profile.");
+  const userRef = doc(db, "users", uid);
+  // Setting name and email to placeholders to anonymize if we want soft delete.
+  // We can just add an isDeleted flag temporarily even if not in the strict User interface.
+  await updateDoc(userRef, { isDeleted: true, name: "Deleted User", email: "deleted@example.com" });
 };

@@ -84,6 +84,13 @@ After successful registration, an agent is not immediately granted access to the
 
 **Strict Dashboard Action Blocking:** Even after onboarding, the CRM Dashboard aggressively checks `id_verify` and `membership.status` flags. If an agent is not fully verified or their membership is inactive, a global alert banner persists, and any attempts to add/import properties or accept high-tier leads are hard-blocked via UI safeguards and service layer validation.
 
+### User Onboarding & Luxury Intent-Based Dashboard
+To match the premium feel of the Agent CRM, the user-facing dashboard employs a luxury aesthetic and intent-based conditional rendering:
+1. **Mandatory User Onboarding:** New users must complete a 4-step onboarding process (Personal, Intent, Location, Review) via `app/user/components/onboarding`. Their responses populate the `User` schema (including `intent` and `exploreintent`), saving via `lib/users/onboardingActions.ts`. `AuthContext` redirects incomplete profiles.
+2. **Dynamic UI Mockups (Intent-Based):** The `UserHomeView.tsx` component reads the user's `intent` (e.g., `buyer`, `seller`, `renter`). Buyers see curated properties, while sellers see market valuation tools and recent sale prices in their area.
+3. **Premium UX Elements:** The sidebar navigation uses `framer-motion` layout animations for fluid tab switching. UI components swap generic emojis for crisp `lucide-react` icons, utilizing a black/white/gold theme palette (`#FBBF24`) that seamlessly supports both dark and light modes.
+4. **Profile Management:** `UserProfileSection.tsx` strictly adheres to the `User` schema (e.g., locking the email field but allowing mobile number changes split by country code), writing directly via `updateUserProfile` in `lib/users/profile.ts`.
+
 ### Property Lifecycle & Ownership Transfer
 1. **User Drafts Property:** A user submits a property they want to sell/rent. It enters the centralized database with `status = "draft"`, `userId = {user.uid}`, and `agentId = null`. It does NOT appear on the public marketplace.
 2. **Agent Claims Property:** An agent reviews the draft via their dashboard. They verify the user's identity details and click "Contact User". Once terms are agreed, the agent clicks "Claim & List".

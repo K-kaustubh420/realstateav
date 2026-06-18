@@ -8,6 +8,9 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 // Make sure this path is correct
 import { login, signup, googleLogin } from "@/auth/userauth"; 
+import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // --- PROPS ---
 interface LoginModalProps {
@@ -63,6 +66,7 @@ const InputField: React.FC<InputFieldProps> = ({
 
 // --- MAIN COMPONENT ---
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+  const router = useRouter();
   const [isLoginView, setIsLoginView] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -92,12 +96,21 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError(null);
 
     try {
+      let result;
       if (isLoginView) {
-        await login(email, password);
+        result = await login(email, password);
       } else {
         // PASS FULLNAME HERE!
-        await signup(email, password, fullName);
+        result = await signup(email, password, fullName);
       }
+      
+      const userDoc = await getDoc(doc(db, "users", result.user.uid));
+      if (!userDoc.exists() || !userDoc.data().onboardingCompleted) {
+        router.push(`/user/onboarding?details=${result.user.uid}`);
+      } else {
+        router.push(`/user/dashboard`);
+      }
+      
       onClose(); 
     } catch (err: unknown) {
       // Firebase throws specific errors. You can format them to look nicer.
@@ -122,7 +135,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setIsLoading(true);
     setError(null);
     try {
-      await socialAction();
+      const result = await socialAction();
+      
+      const userDoc = await getDoc(doc(db, "users", result.user.uid));
+      if (!userDoc.exists() || !userDoc.data().onboardingCompleted) {
+        router.push(`/user/onboarding?details=${result.user.uid}`);
+      } else {
+        router.push(`/user/dashboard`);
+      }
+      
       onClose();
     } catch (err: any) {
       if (err.message !== "Firebase: Error (auth/popup-closed-by-user).") {

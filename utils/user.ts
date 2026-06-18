@@ -7,7 +7,7 @@ export interface User {
         countrycode : string;
         mobilenumber : string;
     } 
-    intent :"buyer" | "seller" | "renter" | "researcher" | "homeowner";
+    intent :"buyer" | "seller" | "renter" | "researcher" | "homeowner" | "";
     exploreintent: string[];
     role : "user" | "agent";
     Address : {

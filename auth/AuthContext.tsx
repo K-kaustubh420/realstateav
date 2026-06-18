@@ -100,9 +100,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               if (role === 'agent') {
                   router.push(`/agentportal/onboarding?details=${currentUser.uid}`);
               } else if (isAgency) {
-                  router.push('/agencyportal/onboarding');
+                  router.push(`/agencyportal/onboarding?details=${currentUser.uid}`);
               } else {
-                  router.push('/user/onboarding');
+                  router.push(`/user/onboarding?details=${currentUser.uid}`);
               }
               return;
           }
