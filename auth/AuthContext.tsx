@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const PUBLIC_ROUTES = [
       "/",
       "/agentportal",
-      "agencyportal",
+      "/agencyportal",
       "/agentportal/login",
       "/agentportal/register",
       "/agentportal/forgot-password",
@@ -111,9 +111,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const isAgencyRoute = pathname.startsWith('/agency') && !pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
           const isAgentRoute = pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
           
-          if (isAgencyRoute && !isAgency) {
-              // Block non-agencies from agency portal
-              router.push(role === 'agent' ? '/agentportal/dashboard' : '/user/dashboard');
+          if (isAgencyRoute && !isAgency && role !== 'agent') {
+              // Block non-agencies and non-agents from agency portal
+              router.push('/user/dashboard');
           } else if (isAgentRoute && role !== 'agent' && !isAgency) {
               // Block standard users from agent portal
               router.push('/user/dashboard');

@@ -96,6 +96,14 @@ export interface Agent {
     canaddproperty : boolean;
      canaddagents : boolean;
      isAgencyOwner?: boolean;
+     owns_agency_named?: string;
+     owned_agency_id?: string;
+     joined_agencies?: Array<{
+         agency_id: string;
+         agency_name: string;
+         role: "owner" | "member";
+         joinedAt: number;
+     }>;
      addedagents? : string[];
      onboardingCompleted?: boolean;
     Address?: {

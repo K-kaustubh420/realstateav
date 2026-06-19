@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, setDoc, where, addDoc, deleteDoc, writeBatch, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, setDoc, where, addDoc, deleteDoc, writeBatch, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "./firebase";
 
 export type GPS = { lat: number; lng: number };
@@ -109,16 +109,39 @@ export const createAgency = async (owner: { agentId: string; name: string; email
     joinRequests: [],
   });
 
+  // Security check: Verify the agent document exists and matches the email
+  const ownerAgentRef = doc(db, "agents", owner.agentId);
+  const ownerSnap = await getDoc(ownerAgentRef);
+  
+  if (!ownerSnap.exists() || ownerSnap.data()?.email !== owner.email) {
+      throw new Error("Security check failed: Agent profile mismatch. Ownership cannot be assigned.");
+  }
+
+  const agentData = ownerSnap.data();
+  if (agentData?.isAgencyOwner) {
+      throw new Error("You already own an agency. An agent can only own one agency.");
+  }
+
   // Auto-map owner as active agency member on their agent document
-  const ownerAgentRef = doc(db, "agents", owner.email);
   await setDoc(
     ownerAgentRef,
     {
-      activeAgency: {
-        agencyId: docRef.id,
-        agencyName: payload.agencyName,
-        role: "owner",
+      isAgencyOwner: true,
+      owns_agency_named: payload.agencyName,
+      owned_agency_id: docRef.id,
+      AgencyDetails: {
+        agencyname: payload.agencyName,
+        agency_id: docRef.id,
+        agencycode: inviteCode,
+        agency_address: payload.address || "",
+        agency_logo: payload.logoUrl || "",
       },
+      joined_agencies: arrayUnion({
+          agency_id: docRef.id,
+          agency_name: payload.agencyName,
+          role: "owner",
+          joinedAt: now
+      })
     },
     { merge: true }
   );

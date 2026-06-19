@@ -5,7 +5,7 @@ import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../../lib/firebase";
 import { getAgentData } from "../../lib/agents";
 import { getAgencyByOwnerEmail, getAgencyById, createAgency, Agency } from "../../lib/agency";
-import CreateAgencyForm from "./components/CreateAgencyForm";
+import AgencyOnboardingWrapper from "./components/onboarding/AgencyOnboardingWrapper";
 import AgencyPending from "./components/AgencyPending";
 import AgencyRejected from "./components/AgencyRejected";
 import AgencyDashboard from "./components/AgencyDashboard";
@@ -37,7 +37,7 @@ export default function AgencyPage() {
       setUserEmail(user.email);
 
       try {
-        const a = await getAgentData(user.email);
+        const a = await getAgentData(user.uid);
         setAgentData(a);
         const ag = await getAgencyByOwnerEmail(user.email);
         setAgency(ag);
@@ -64,8 +64,8 @@ export default function AgencyPage() {
       }
 
       // verify account is an agent with approved status
-      const a = await getAgentData(user.email);
-      if (!a || a.role !== "agent" || a.id_verify !== "verified") {
+      const a = await getAgentData(user.uid);
+      if (!a || (a.role !== "agent" && a.role !== "agency") || a.id_verify !== "verified") {
         setError("Only verified agents may sign in here.");
         await signOut(auth);
         return;
@@ -141,7 +141,7 @@ export default function AgencyPage() {
   }
 
   // 2. Logged in but not an agent
-  if (!agentData || agentData.role !== "agent") {
+  if (!agentData || (agentData.role !== "agent" && agentData.role !== "agency")) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
         <div className="rounded-2xl border border-white/6 bg-slate-900/80 px-8 py-10 text-center shadow-lg backdrop-blur-xl">
@@ -168,13 +168,9 @@ export default function AgencyPage() {
   // If no agency: show create form
   if (!agency) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white px-4 py-10 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-semibold">Create your agency</h1>
-            <p className="mt-2 text-slate-400">Start by creating your agency. Our team will review the submission.</p>
-          </div>
-          <CreateAgencyForm defaultValues={{}} onSubmit={handleCreate} />
+      <main className="min-h-screen bg-gray-100 dark:bg-black text-black dark:text-white pt-10 px-4 pb-10 flex justify-center items-center">
+        <div className="w-full max-w-5xl">
+          <AgencyOnboardingWrapper defaultValues={{}} onSubmit={handleCreate} />
         </div>
       </main>
     );
@@ -193,10 +189,15 @@ export default function AgencyPage() {
 
   if (agency.agencyStatus === "rejected") {
     return (
-      <main className="min-h-screen bg-slate-950 text-white px-4 py-10 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <AgencyRejected rejectionReason={agency.rejectionReason || "No reason provided."} onResubmit={() => setShowCreate(true)} />
-          {showCreate && <CreateAgencyForm defaultValues={agency.details} onSubmit={handleCreate} />}
+      <main className="min-h-screen bg-gray-100 dark:bg-black text-black dark:text-white pt-10 px-4 pb-10 lg:px-8 flex justify-center items-center">
+        <div className="w-full max-w-5xl">
+          {!showCreate ? (
+            <div className="bg-slate-950 text-white p-8 rounded-2xl">
+              <AgencyRejected rejectionReason={agency.rejectionReason || "No reason provided."} onResubmit={() => setShowCreate(true)} />
+            </div>
+          ) : (
+             <AgencyOnboardingWrapper defaultValues={agency.details} onSubmit={handleCreate} />
+          )}
         </div>
       </main>
     );

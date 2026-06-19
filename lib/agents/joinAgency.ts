@@ -33,7 +33,7 @@ export type PendingAgencyRequest = {
   requestedAt: number;
 };
 
-const getAgentRef = (email: string) => doc(db, "agents", email);
+const getAgentRef = (uid: string) => doc(db, "agents", uid);
 
 export const findAgencyByInviteCode = async (inviteCode: string): Promise<Agency | null> => {
   const q = query(agenciesCol, where("inviteCode", "==", inviteCode.trim().toUpperCase()));
@@ -53,7 +53,7 @@ export const submitAgencyJoinRequest = async (inviteCode: string, agent: AgentDa
     throw new Error("Invite code not found. Please check and try again.");
   }
   if (agency.agencyStatus !== "approved") {
-    throw new Error("This agency is not accepting join requests.");
+    throw new Error("This agency is still pending approval and cannot accept join requests yet.");
   }
 
   const alreadyMember = agency.agents?.some((item) => item.agentId === agent.uid);
@@ -78,7 +78,7 @@ export const submitAgencyJoinRequest = async (inviteCode: string, agent: AgentDa
     joinRequests: arrayUnion(request),
   });
 
-  const agentRef = getAgentRef(agent.email);
+  const agentRef = getAgentRef(agent.uid);
   await setDoc(
     agentRef,
     {
@@ -136,7 +136,7 @@ export const leaveAgency = async (agent: AgentData): Promise<void> => {
 
   await removeAgentFromAgency(activeAgency.agencyId, agent.uid);
 
-  const agentRef = getAgentRef(agent.email!);
+  const agentRef = getAgentRef(agent.uid!);
   await updateDoc(agentRef, {
     activeAgency: deleteField(),
     pendingAgencyRequest: deleteField(),
@@ -146,7 +146,7 @@ export const leaveAgency = async (agent: AgentData): Promise<void> => {
 export const approveAgencyJoinRequest = async (agencyId: string, request: AgencyJoinRequest): Promise<void> => {
   await approveJoinRequest(agencyId, request);
   const agency = await getAgencyById(agencyId);
-  const agentRef = getAgentRef(request.email);
+  const agentRef = getAgentRef(request.agentId);
   await setDoc(
     agentRef,
     {
@@ -162,7 +162,7 @@ export const approveAgencyJoinRequest = async (agencyId: string, request: Agency
 
 export const rejectAgencyJoinRequest = async (agencyId: string, request: AgencyJoinRequest): Promise<void> => {
   await rejectJoinRequest(agencyId, request.agentId);
-  const agentRef = getAgentRef(request.email);
+  const agentRef = getAgentRef(request.agentId);
   await setDoc(
     agentRef,
     {
@@ -172,8 +172,8 @@ export const rejectAgencyJoinRequest = async (agencyId: string, request: AgencyJ
   );
 };
 
-export const clearAgentPendingRequest = async (email: string): Promise<void> => {
-  const agentRef = getAgentRef(email);
+export const clearAgentPendingRequest = async (uid: string): Promise<void> => {
+  const agentRef = getAgentRef(uid);
   await updateDoc(agentRef, {
     pendingAgencyRequest: deleteField(),
   });
