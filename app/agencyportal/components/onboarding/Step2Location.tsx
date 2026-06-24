@@ -1,18 +1,17 @@
 import { useState } from "react";
 
 export default function Step2Location({ onboarding }: { onboarding: any }) {
-  const { formData, updateForm, nextStep, prevStep, locateMe, geoError } = onboarding;
+  const { formData, updateAddress, nextStep, prevStep, locateMe, geoError } = onboarding;
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleNext = () => {
-    const required = ["phone", "email", "address", "city", "state"];
     const newErrors: Record<string, string> = {};
+    const addr = formData.Address;
     
-    required.forEach((field) => {
-      if (!formData[field] || String(formData[field]).trim() === "") {
-        newErrors[field] = "This field is required";
-      }
-    });
+    if (!addr.addressLine1?.trim()) newErrors.addressLine1 = "Address Line 1 is required";
+    if (!addr.city?.trim()) newErrors.city = "City is required";
+    if (!addr.state?.trim()) newErrors.state = "State is required";
+    if (!addr.country?.trim()) newErrors.country = "Country is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -25,74 +24,76 @@ export default function Step2Location({ onboarding }: { onboarding: any }) {
   return (
     <div className="flex flex-col h-full w-full animation-fade-in">
       <div className="mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold mb-2">Location & Contact</h2>
-        <p className="text-gray-500 dark:text-gray-400">Where is your agency located and how can clients reach you?</p>
+        <h2 className="text-2xl md:text-3xl font-bold mb-2">Location Details</h2>
+        <p className="text-gray-500 dark:text-gray-400">Where is your agency located?</p>
       </div>
 
       <div className="space-y-6 grow">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Email Address *</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => updateForm("email", e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
-            />
-            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Phone Number *</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => updateForm("phone", e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
-            />
-            {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Address Line 1 *</label>
+          <input
+            type="text"
+            value={formData.Address.addressLine1}
+            onChange={(e) => updateAddress("addressLine1", e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
+            placeholder="Street address, P.O. box, etc."
+          />
+          {errors.addressLine1 && <p className="text-red-500 text-sm mt-1">{errors.addressLine1}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Street Address *</label>
+          <label className="block text-sm font-medium mb-2">Address Line 2</label>
           <input
             type="text"
-            value={formData.address}
-            onChange={(e) => updateForm("address", e.target.value)}
+            value={formData.Address.addressLine2}
+            onChange={(e) => updateAddress("addressLine2", e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
+            placeholder="Suite, unit, building, floor, etc."
           />
-          {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium mb-2">City *</label>
             <input
               type="text"
-              value={formData.city}
-              onChange={(e) => updateForm("city", e.target.value)}
+              value={formData.Address.city}
+              onChange={(e) => updateAddress("city", e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
             />
             {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">State *</label>
+            <label className="block text-sm font-medium mb-2">State / Province *</label>
             <input
               type="text"
-              value={formData.state}
-              onChange={(e) => updateForm("state", e.target.value)}
+              value={formData.Address.state}
+              onChange={(e) => updateAddress("state", e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
             />
             {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium mb-2">Pincode</label>
+            <label className="block text-sm font-medium mb-2">Postal Code</label>
             <input
               type="text"
-              value={formData.pincode}
-              onChange={(e) => updateForm("pincode", e.target.value)}
+              value={formData.Address.postalCode}
+              onChange={(e) => updateAddress("postalCode", e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Country *</label>
+            <input
+              type="text"
+              value={formData.Address.country}
+              onChange={(e) => updateAddress("country", e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all"
+            />
+            {errors.country && <p className="text-red-500 text-sm mt-1">{errors.country}</p>}
           </div>
         </div>
 

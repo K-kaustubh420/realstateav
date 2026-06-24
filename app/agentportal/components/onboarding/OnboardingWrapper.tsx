@@ -10,14 +10,7 @@ import ProgressBar from "./ProgressBar";
 export default function OnboardingWrapper() {
   const onboarding = useAgentOnboarding();
 
-  if (onboarding.loading) {
-    return (
-      <div className="flex flex-col items-center justify-center">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-        <p className="mt-4 text-gray-500">Loading your data...</p>
-      </div>
-    );
-  }
+  
 
   // Calculate percentage
   const totalSteps = 4;

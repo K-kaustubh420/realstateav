@@ -13,7 +13,7 @@ import {
   getAgentActiveAgency,
   PendingAgencyRequest,
 } from "@/lib/agents/joinAgency";
-import { Agency, getAgencyById, AgencyProperty } from "@/lib/agency";
+import { Agency, getAgencyById, AgencyProperty } from "@/lib/agency/agency";
 import { Agent } from "@/utils/user";
 
 type AgentAgencySectionProps = {

@@ -46,7 +46,7 @@ export async function generateAndSendOtp(email: string): Promise<string> {
       html: `
         <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; border: 1px solid #e4e4e7; rounded: 12px;">
           <h2 style="font-size: 24px; color: #18181b; font-weight: bold; margin-bottom: 16px;">Verify Your Email Address</h2>
-          <p style="color: #71717a; font-size: 16px; margin-bottom: 24px;">Please use the following 4-digit verification code to complete your registration as an agent on Bhu Market.</p>
+          <p style="color: #71717a; font-size: 16px; margin-bottom: 24px;">Please use the following 4-digit verification code to complete your verification on Bhu Market.</p>
           <div style="background-color: #f4f4f5; padding: 16px; text-align: center; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #D4AF37; margin-bottom: 24px;">
             ${otp}
           </div>

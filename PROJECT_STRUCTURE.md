@@ -51,6 +51,8 @@ realstateav/
 | `app/components/` | Reusable UI widgets (e.g., `ChatWidget`) | `lib/firebase`, `lib/chat/types` | Central place for UI that appears across both user & agent portals. |
 | `app/agentportal/components/` | Agent CRM specific UI (agency list, property cards, chat section, AgentWorkbench) | `lib/agents/*` | Isolated 3-column UI for the professional agent experience. |
 | `app/agentportal/onboarding/` | Agent Onboarding flow & UI steps | `lib/agents/onboarding/*` | Forces newly registered agents to complete their profile setup before accessing the dashboard. |
+| `app/agencyportal/` | Agency portals for managing agents and agency-wide settings | UI components, `lib/agency/*` | Contains the dashboard, preferences, and agent management logic for agency owners. |
+| `app/agencyportal/components/dashboard/` | Sub-components for Agency Dashboard (Profile, ManagingAgents, Preferences) | `lib/agency/*` | Modularized structure to cleanly separate settings, agent tables, and location map logic. |
 | `app/user/components/onboarding/` | User Onboarding flow & UI steps | `lib/users/onboardingActions.ts` | Multi-step setup for new users (Personal, Intent, Location, Review) ensuring full profile data. |
 | `app/user/dashboard/` | User dashboard pages and sections (home, profile, property list, chats) | `lib/users/*` | Core entry point for a logged‑in user, featuring a premium intent-based dynamic UI. |
 | `app/layout.tsx` | Global layout (navbar, theming) | — | Wraps all pages; removing breaks navigation. |
@@ -97,7 +99,11 @@ The `lib/` folder is the **brain** of the application. All data manipulation, sa
   * `service.ts` – Server Actions (`submitAgentKYC`, `processDecision`, `fetchPendingRequests`, `verifyAgentIntegrity`) for submitting and validating KYC requests using Firestore transactions.
   * `index.ts` – Bundles the service exports for clean imports.
 - **`lib/properties/*`** – Shared utilities for property status updates, image handling, and validation.
-- **`lib/agency.ts`** – Core agency management (create, join, leave, transfer ownership).
+- **`lib/agency/`** – Core agency sub-system:
+  * `agency.ts` – Core agency management (create, join, leave, transfer ownership).
+  * `manageAgents.ts` – Approving/rejecting requests, rotating invite code.
+  * `profile.ts` – Editing agency public details.
+  * `preferences.ts` – Managing preferred locations and property types.
 
 ---
 

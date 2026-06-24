@@ -102,9 +102,10 @@ To match the premium feel of the Agent CRM, the user-facing dashboard employs a 
 3. **Delivery:** When a message is sent, it pushes directly to RTDB, bypassing complex backend logic, achieving near-instantaneous delivery to the recipient.
 
 ### Agency Ownership & Management
-Agents can create or join Agencies. When an agent creates a property listing, they can choose to list it as an "individual" or under their "active agency".
-* If an agent leaves an agency, properties strictly tied to the agency remain with the agency, ensuring business continuity. Properties tied to the individual move with the individual.
-
+Agents can create or join Agencies. The agency dashboard (`/app/agencyportal/dashboard`) operates as a modular CRM for agency owners, strictly separating logic into `Profile`, `ManagingAgents`, and `Preferences` components.
+* Agency logic is decoupled into specific files (`lib/agency/agency.ts`, `manageAgents.ts`, `profile.ts`, `preferences.ts`) to maintain thin UI layers.
+* When an agent creates a property listing, they can choose to list it as an "individual" or under their "active agency".
+* If an agent leaves an agency, properties tied to the agency transfer ownership securely back to the agency owner via batch updates.
 ---
 
 ## 4. Scalability, Safety & Edge Cases

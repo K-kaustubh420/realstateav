@@ -1,5 +1,5 @@
 import { collection, doc, getDoc, getDocs, query, setDoc, where, addDoc, deleteDoc, writeBatch, updateDoc, arrayUnion } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "@/lib/firebase";
 
 export type GPS = { lat: number; lng: number };
 
@@ -27,19 +27,33 @@ export type AgencyProperty = {
   agentName?: string;
 };
 
+export type AgencyAddress = {
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+};
+
 export type AgencyDetails = {
   about?: string;
   phone?: string;
   email?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
+  Address?: AgencyAddress;
   website?: string;
+  panNumber?: string;
+  panImageUrl?: string;
+  registrationDate?: string;
   gstNumber?: string;
   logoUrl?: string;
   bannerUrl?: string;
   gpsLocation?: GPS;
+};
+
+export type AgencyPreferences = {
+  preferredLocations?: string[];
+  preferredPropertyTypes?: string[];
 };
 
 export type Agency = {
@@ -47,6 +61,7 @@ export type Agency = {
   agencyName: string;
   inviteCode?: string;
   agencyStatus?: "none" | "pending" | "approved" | "rejected";
+  id_verify?: "unverified" | "pending" | "verified";
   rejectionReason?: string;
   verificationRequested?: boolean;
   createdAt?: number;
@@ -54,6 +69,7 @@ export type Agency = {
   details?: AgencyDetails;
   agents?: AgencyAgent[];
   joinRequests?: AgencyJoinRequest[];
+  preferences?: AgencyPreferences;
 };
 
 const agenciesCol = collection(db, "agencies");
@@ -92,6 +108,7 @@ export const createAgency = async (owner: { agentId: string; name: string; email
     agencyName: payload.agencyName,
     inviteCode,
     agencyStatus: "pending",
+    id_verify: payload.kycStatus === "verify_now" ? "pending" : "unverified",
     verificationRequested: true,
     createdAt: now,
     owner,
@@ -133,8 +150,9 @@ export const createAgency = async (owner: { agentId: string; name: string; email
         agencyname: payload.agencyName,
         agency_id: docRef.id,
         agencycode: inviteCode,
-        agency_address: payload.address || "",
+        agency_address: payload.Address?.addressLine1 || "",
         agency_logo: payload.logoUrl || "",
+        status: "pending"
       },
       joined_agencies: arrayUnion({
           agency_id: docRef.id,
@@ -252,4 +270,33 @@ export const getAgencyPropertiesByAgent = async (agencyId: string): Promise<Agen
 export const deleteAgency = async (agencyId: string): Promise<void> => {
   const ref = doc(db, "agencies", agencyId);
   await deleteDoc(ref);
+};
+
+export const getPendingAgencies = async (): Promise<Agency[]> => {
+  const q = query(agenciesCol, where("agencyStatus", "==", "pending"));
+  const snaps = await getDocs(q);
+  return snaps.docs.map((docSnap) => ({ agencyId: docSnap.id, ...(docSnap.data() as any) })) as Agency[];
+};
+
+export const approveAgency = async (agencyId: string): Promise<void> => {
+  const agency = await getAgencyById(agencyId);
+  if (!agency) throw new Error("Agency not found.");
+
+  const batch = writeBatch(db);
+  const agencyRef = doc(db, "agencies", agencyId);
+  batch.update(agencyRef, { agencyStatus: "approved", id_verify: "verified" });
+
+  if (agency.owner?.agentId) {
+    const agentRef = doc(db, "agents", agency.owner.agentId);
+    batch.update(agentRef, {
+      "AgencyDetails.status": "approved",
+      id_verify: "verified"
+    });
+  }
+
+  await batch.commit();
+};
+
+export const rejectAgency = async (agencyId: string, reason: string): Promise<void> => {
+  await updateAgency(agencyId, { agencyStatus: "rejected", rejectionReason: reason });
 };

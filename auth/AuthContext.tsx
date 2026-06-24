@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Add all public unauthenticated routes here
     const PUBLIC_ROUTES = [
       "/",
       "/agentportal",
@@ -54,6 +53,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       "/share/agentprofile",
       "/mortgage-calculator"
     ];
+
+    const blockUntil = localStorage.getItem('block_portals_until');
+    const isPortalRoute = pathname.startsWith('/agencyportal') || pathname.startsWith('/agentportal');
+    if (blockUntil && isPortalRoute) {
+        if (Date.now() < parseInt(blockUntil, 10)) {
+            router.push('/');
+            return;
+        } else {
+            localStorage.removeItem('block_portals_until');
+        }
+    }
 
     const fetchUserProfile = async (uid: string) => {
         // First check agents collection, then users collection
@@ -108,7 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
 
           // 2. Strict Role-Based Guards
-          const isAgencyRoute = pathname.startsWith('/agency') && !pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
+          const isAgencyRoute = pathname.startsWith('/agency') && pathname !== '/agencyportal' && !pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
           const isAgentRoute = pathname.startsWith('/agentportal') && !pathname.includes('login') && !pathname.includes('register') && !pathname.includes('onboarding');
           
           if (isAgencyRoute && !isAgency && role !== 'agent') {

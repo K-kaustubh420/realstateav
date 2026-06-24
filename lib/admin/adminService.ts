@@ -1,7 +1,9 @@
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, query, orderBy, limit } from 'firebase/firestore';
-import { Property } from './property';
-import { User, Agent } from './user';
+import { Property } from '../../utils/property';
+import { User, Agent } from '../../utils/user';
+
+import { getPendingAgencies, approveAgency, rejectAgency, Agency as AgencyType } from '../agency/agency';
 
 export class AdminService {
   static async fetchAllProperties(): Promise<Property[]> {
@@ -26,10 +28,22 @@ export class AdminService {
   }
 
   static async fetchAllAgencies(): Promise<any[]> {
-    const agencySnap = await getDocs(collection(db, 'agency'));
+    const agencySnap = await getDocs(collection(db, 'agencies'));
     const agencies: any[] = [];
     agencySnap.forEach(d => agencies.push({ id: d.id, ...d.data() }));
     return agencies;
+  }
+
+  static async fetchPendingAgencies(): Promise<AgencyType[]> {
+    return await getPendingAgencies();
+  }
+
+  static async approveAgencyRequest(agencyId: string): Promise<void> {
+    return await approveAgency(agencyId);
+  }
+
+  static async rejectAgencyRequest(agencyId: string, reason: string): Promise<void> {
+    return await rejectAgency(agencyId, reason);
   }
 
   static async fetchRecentChats(): Promise<any[]> {

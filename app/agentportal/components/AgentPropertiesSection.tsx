@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Plus, Edit3, CheckCircle, Ban, RefreshCw, Trash2, Home, User, Building2, MapPin, DollarSign, Layers } from "lucide-react";
-import { fetchUserProfile, UserProfile } from '@/lib/users/profile';
+import { fetchUserProfile } from '@/lib/users/profile';
 import { Property, PropertyScene, PropertyStatus } from "@/lib/properties/property.types";
-import { getAgentData } from "@/lib/agents";
-import { Agent } from "@/utils/user";
+import { Agent, User as user } from "@/utils/user";
 import { updatePropertyStatus } from "@/lib/properties/propertyStatus";
 import { deleteProperty } from "@/lib/properties/deleteProperty";
 import { fetchAgentPropertiesData } from "@/lib/agents/propertyService";
@@ -37,7 +36,7 @@ export default function AgentPropertiesSection({ uid, email }: AgentPropertiesSe
   // Draft review state
   const [reviewingProperty, setReviewingProperty] = useState<Property | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewUserProfile, setReviewUserProfile] = useState<UserProfile | null>(null);
+  const [reviewUserProfile, setReviewUserProfile] = useState<User | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
 
 
@@ -146,7 +145,7 @@ export default function AgentPropertiesSection({ uid, email }: AgentPropertiesSe
         reviewUserProfile.fullName || '',
         reviewUserProfile.email
       );
-      
+
       setActiveChatId(convId);
       setChatTitle(reviewingProperty.title || '');
       setChatSubtitle(`with ${reviewUserProfile.fullName || 'User'}`);
